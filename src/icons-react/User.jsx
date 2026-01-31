@@ -1,0 +1,17 @@
+import * as React from "react";
+const SvgUser = (props) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="1em"
+    height="1em"
+    fill="none"
+    viewBox="0 0 24 24"
+    {...props}
+  >
+    <path
+      stroke="currentColor"
+      d="M16 6a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM20 17.5c0 2.485 0 4.5-8 4.5s-8-2.015-8-4.5S7.582 13 12 13s8 2.015 8 4.5Z"
+    />
+  </svg>
+);
+export default SvgUser;

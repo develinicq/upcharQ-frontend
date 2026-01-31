@@ -1,0 +1,2475 @@
+import React, { useEffect, useMemo, useState, useRef } from "react";
+import { createPortal } from "react-dom";
+import { Calendar, Sunrise, Sun, Sunset, Moon, X, Clock } from "lucide-react";
+import {
+  bookWalkInAppointment,
+  findPatientSlots,
+} from "../../../services/authService";
+import { classifyISTDayPart, buildISTRangeLabel } from "../../../lib/timeUtils";
+import QueueDatePicker from "../../../components/QueueDatePicker";
+import AvatarCircle from "../../../components/AvatarCircle";
+import Button from "../../../components/Button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Calendar as ShadcnCalendar } from "@/components/ui/calendar";
+import Badge from "../../../components/Badge";
+import { calendarMinimalistic } from "../../../../public/index.js";
+import OverviewStatCard from "../../../components/OverviewStatCard";
+import Toggle from "../../../components/FormItems/Toggle";
+import QueueTable from "./QueueTable";
+import useAuthStore from "../../../store/useAuthStore";
+import useSlotStore from "../../../store/useSlotStore";
+import {
+  getDoctorMe,
+  startSlotEta,
+  endSlotEta,
+  getSlotEtaStatus,
+  startPatientSessionEta,
+  endPatientSessionEta,
+  pauseSlotEta,
+  resumeSlotEta,
+  markNoShowAppointment,
+} from "../../../services/authService";
+import {
+  action_dot,
+  appointement,
+  morningQueue,
+  nightQueue,
+  afternoonQueue,
+  eveningQueue,
+  downloadIcon,
+  refresh,
+  terminate,
+  vertical,
+  queueUndo,
+  calenderUndo,
+  angelDown,
+  pauseIconRed,
+} from "../../../../public/index.js";
+import BookAppointmentDrawer from "../../../components/Appointment/BookAppointmentDrawer.jsx";
+import PauseQueueModal from "../../../components/PauseQueueModal.jsx";
+
+// Walk-in Appointment Drawer (full version replicated from Front Desk)
+const WalkInAppointmentDrawer = ({
+  show,
+  onClose,
+  doctorId,
+  clinicId,
+  hospitalId,
+  onBookedRefresh,
+}) => {
+  const [isExisting, setIsExisting] = useState(false);
+  const [apptType, setApptType] = useState("New Consultation");
+  const [reason, setReason] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [dob, setDob] = useState("");
+  const [gender, setGender] = useState("");
+  const [bloodGroup, setBloodGroup] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [email, setEmail] = useState("");
+  const dobRef = useRef(null);
+  const [apptDate, setApptDate] = useState(() =>
+    new Date().toISOString().slice(0, 10)
+  );
+  const apptDateRef = useRef(null);
+  const suggestions = [
+    "New Consultation",
+    "Follow-up Consultation",
+    "Review Visit",
+  ];
+  const reasonSuggestions = [
+    "Cough",
+    "Cold",
+    "Headache",
+    "Nausea",
+    "Dizziness",
+    "Muscle Pain",
+    "Sore Throat",
+  ];
+  const genders = ["Male", "Female", "Other"];
+  const bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+  const [booking, setBooking] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [showDobCalendar, setShowDobCalendar] = useState(false);
+  const [showApptDateCalendar, setShowApptDateCalendar] = useState(false);
+  // Local slots state
+  const [grouped, setGrouped] = useState({
+    morning: [],
+    afternoon: [],
+    evening: [],
+    night: [],
+  });
+  const [timeBuckets, setTimeBuckets] = useState([]);
+  const [bucketKey, setBucketKey] = useState("morning");
+  const [selectedSlotId, setSelectedSlotId] = useState(null);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [slotsError, setSlotsError] = useState("");
+  useEffect(() => {
+    let ignore = false;
+    const load = async () => {
+      if (!show) return;
+      if (!doctorId || (!clinicId && !hospitalId)) return;
+      setSelectedSlotId(null);
+      setGrouped({ morning: [], afternoon: [], evening: [], night: [] });
+      setTimeBuckets([]);
+      setLoadingSlots(true);
+      setSlotsError("");
+      try {
+        const resp = await findPatientSlots({
+          doctorId,
+          date: apptDate,
+          clinicId,
+          hospitalId,
+        });
+        const arr = Array.isArray(resp)
+          ? resp
+          : resp?.data || resp?.slots || [];
+        if (ignore) return;
+        const grp = (arr || []).reduce(
+          (acc, s) => {
+            const part = classifyISTDayPart(s.startTime);
+            if (!acc[part]) acc[part] = [];
+            acc[part].push(s);
+            return acc;
+          },
+          { morning: [], afternoon: [], evening: [], night: [] }
+        );
+        setGrouped(grp);
+        const tb = [];
+        if (grp.morning.length) {
+          const f = grp.morning[0],
+            l = grp.morning[grp.morning.length - 1];
+          tb.push({
+            key: "morning",
+            label: "Morning",
+            time: buildISTRangeLabel(f.startTime, l.endTime),
+            Icon: Sunrise,
+          });
+        }
+        if (grp.afternoon.length) {
+          const f = grp.afternoon[0],
+            l = grp.afternoon[grp.afternoon.length - 1];
+          tb.push({
+            key: "afternoon",
+            label: "Afternoon",
+            time: buildISTRangeLabel(f.startTime, l.endTime),
+            Icon: Sun,
+          });
+        }
+        if (grp.evening.length) {
+          const f = grp.evening[0],
+            l = grp.evening[grp.evening.length - 1];
+          tb.push({
+            key: "evening",
+            label: "Evening",
+            time: buildISTRangeLabel(f.startTime, l.endTime),
+            Icon: Sunset,
+          });
+        }
+        if (grp.night.length) {
+          const f = grp.night[0],
+            l = grp.night[grp.night.length - 1];
+          tb.push({
+            key: "night",
+            label: "Night",
+            time: buildISTRangeLabel(f.startTime, l.endTime),
+            Icon: Moon,
+          });
+        }
+        setTimeBuckets(tb);
+        const firstNonEmpty = tb[0]?.key || "morning";
+        setBucketKey(firstNonEmpty);
+        const firstSlot = (grp[firstNonEmpty] || [])[0] || null;
+        setSelectedSlotId(
+          firstSlot ? firstSlot.id || firstSlot.slotId || firstSlot._id : null
+        );
+      } catch (e) {
+        if (!ignore)
+          setSlotsError(
+            e?.response?.data?.message || e.message || "Failed to load slots"
+          );
+      } finally {
+        if (!ignore) setLoadingSlots(false);
+      }
+    };
+    load();
+    return () => {
+      ignore = true;
+    };
+  }, [show, apptDate, doctorId, clinicId, hospitalId]);
+
+  // Close calendars on click outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      const target = event.target;
+      const isCalendarClick = target.closest(".shadcn-calendar-dropdown");
+      if (!isCalendarClick) {
+        setShowDobCalendar(false);
+        setShowApptDateCalendar(false);
+      }
+    };
+
+    if (showDobCalendar || showApptDateCalendar) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showDobCalendar, showApptDateCalendar]);
+
+  const canBook = () => !booking;
+  const handleBook = async () => {
+    if (!canBook()) return;
+    setBooking(true);
+    setErrorMsg("");
+    setFieldErrors({});
+    try {
+      const mapBloodGroup = (bg) => {
+        if (!bg) return undefined;
+        const base = bg.toUpperCase();
+        if (base.endsWith("+")) return base.replace("+", "_POSITIVE");
+        if (base.endsWith("-")) return base.replace("-", "_NEGATIVE");
+        return base;
+      };
+      const apiBloodGroup = mapBloodGroup(bloodGroup);
+      let payload;
+      if (isExisting) {
+        // Existing patient flow remains as-is (backend contract may differ)
+        payload = {
+          method: "EXISTING",
+          bookingMode: "WALK_IN",
+          patientId: mobile.trim(),
+          reason: reason.trim(),
+          slotId: selectedSlotId,
+          bookingType: apptType?.toLowerCase().includes("follow")
+            ? "FOLLOW_UP"
+            : "NEW",
+          doctorId,
+          clinicId,
+          hospitalId,
+          date: apptDate,
+        };
+      } else {
+        // Modify payload to match required API format for walk-in NEW_USER
+        // Expected:
+        // { method, firstName, lastName, phone, emailId, dob, gender, bloodGroup, reason, slotId, bookingType }
+        payload = {
+          method: "NEW_USER",
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          phone: mobile.trim(),
+          emailId: (email || "").trim() || undefined,
+          dob: dob.trim(),
+          gender: (gender || "").toUpperCase(),
+          bloodGroup: apiBloodGroup,
+          reason: reason.trim(),
+          slotId: selectedSlotId,
+          bookingType: apptType?.toUpperCase().includes("REVIEW")
+            ? "FOLLOW_UP"
+            : "NEW",
+        };
+      }
+      try {
+        console.debug("[Doctor] walk-in booking payload:", payload);
+      } catch {}
+      await bookWalkInAppointment(payload);
+      onBookedRefresh?.();
+      onClose();
+    } catch (e) {
+      const msg = e?.message || "Booking failed";
+      const errs = e?.validation || e?.response?.data?.errors || null;
+      if (errs && typeof errs === "object") setFieldErrors(errs);
+      setErrorMsg(String(msg));
+    } finally {
+      setBooking(false);
+    }
+  };
+  return (
+    <>
+      <div
+        className={`fixed inset-0 bg-black bg-opacity-30 z-40 transition-opacity duration-300 ${
+          show
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
+        }`}
+        onClick={onClose}
+      />
+      <div
+        className={`fixed z-50 transition-transform duration-500 ${
+          show ? "translate-x-0" : "translate-x-full"
+        }`}
+        style={{
+          top: 24,
+          right: show ? 24 : 0,
+          bottom: 24,
+          width: 520,
+          maxWidth: "100vw",
+          background: "white",
+          borderTopLeftRadius: 14,
+          borderBottomLeftRadius: 14,
+          boxShadow: "0 8px 32px 0 rgba(0,0,0,0.18)",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div className="p-4 flex flex-col h-full">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-[18px] font-semibold">
+              Book Walk-In Appointment
+            </h2>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleBook}
+                disabled={!canBook()}
+                className={`text-sm font-medium rounded px-3 py-1.5 border ${
+                  canBook()
+                    ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+                    : "text-gray-400 bg-gray-100 border-gray-200 cursor-not-allowed"
+                }`}
+              >
+                {booking ? "Booking..." : "Book Appointment"}
+              </button>
+              <div className="h-6 w-px bg-gray-300"></div>
+              <button
+                className="text-gray-500 hover:text-gray-700"
+                onClick={onClose}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+          <RadioGroup
+            value={isExisting ? "existing" : "new"}
+            onValueChange={(value) => setIsExisting(value === "existing")}
+            className="flex items-center gap-6 mt-2 mb-4"
+          >
+            <div className="flex items-center gap-2">
+              <RadioGroupItem value="existing" id="queue-existing" />
+              <label
+                htmlFor="queue-existing"
+                className="text-sm text-gray-700 cursor-pointer"
+              >
+                Existing Patients
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <RadioGroupItem value="new" id="queue-new" />
+              <label
+                htmlFor="queue-new"
+                className="text-sm text-gray-700 cursor-pointer"
+              >
+                New Patient
+              </label>
+            </div>
+          </RadioGroup>
+          {errorMsg && (
+            <div className="mb-3 p-2 rounded border border-red-200 bg-red-50 text-[12px] text-red-700">
+              {errorMsg}
+            </div>
+          )}
+          <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+            {isExisting ? (
+              <div className="mb-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Patient <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={mobile}
+                  onChange={(e) => setMobile(e.target.value)}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                  placeholder="Search Patient by name, Abha id, Patient ID or Contact Number"
+                />
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      First Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      type="text"
+                      className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none ${
+                        fieldErrors.firstName
+                          ? "border-red-400 focus:border-red-500"
+                          : "border-gray-300 focus:border-blue-500"
+                      }`}
+                      placeholder="Enter First Name"
+                    />
+                    {fieldErrors.firstName && (
+                      <div className="text-[11px] text-red-600 mt-1">
+                        {String(fieldErrors.firstName)}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Last Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      type="text"
+                      className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none ${
+                        fieldErrors.lastName
+                          ? "border-red-400 focus:border-red-500"
+                          : "border-gray-300 focus:border-blue-500"
+                      }`}
+                      placeholder="Enter Last Name"
+                    />
+                    {fieldErrors.lastName && (
+                      <div className="text-[11px] text-red-600 mt-1">
+                        {String(fieldErrors.lastName)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Date of Birth <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        value={dob}
+                        onChange={(e) => setDob(e.target.value)}
+                        type="text"
+                        placeholder="Select Date of Birth"
+                        className={`w-full rounded-md border px-3 py-2 text-sm pr-8 focus:outline-none ${
+                          fieldErrors.dob
+                            ? "border-red-400 focus:border-red-500"
+                            : "border-gray-300 focus:border-blue-500"
+                        }`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowDobCalendar(!showDobCalendar)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500"
+                      >
+                        <img
+                          src={calendarMinimalistic}
+                          alt="Calendar"
+                          className="w-4 h-4"
+                        />
+                      </button>
+                      {showDobCalendar && (
+                        <div className="shadcn-calendar-dropdown absolute z-[9999] mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
+                          <ShadcnCalendar
+                            mode="single"
+                            selected={dob ? new Date(dob) : undefined}
+                            onSelect={(date) => {
+                              if (date) {
+                                const year = date.getFullYear();
+                                const month = String(
+                                  date.getMonth() + 1
+                                ).padStart(2, "0");
+                                const day = String(date.getDate()).padStart(
+                                  2,
+                                  "0"
+                                );
+                                setDob(`${year}-${month}-${day}`);
+                              }
+                              setShowDobCalendar(false);
+                            }}
+                            captionLayout="dropdown"
+                            fromYear={1900}
+                            toYear={new Date().getFullYear()}
+                            className="rounded-md"
+                          />
+                        </div>
+                      )}
+                    </div>
+                    {fieldErrors.dob && (
+                      <div className="text-[11px] text-red-600 mt-1">
+                        {String(fieldErrors.dob)}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Gender <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={gender}
+                      onChange={(e) => setGender(e.target.value)}
+                      className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none ${
+                        fieldErrors.gender
+                          ? "border-red-400 focus:border-red-500"
+                          : "border-gray-300 focus:border-blue-500"
+                      }`}
+                    >
+                      <option value="" disabled>
+                        Select Gender
+                      </option>
+                      {genders.map((g) => (
+                        <option key={g} value={g}>
+                          {g}
+                        </option>
+                      ))}
+                    </select>
+                    {fieldErrors.gender && (
+                      <div className="text-[11px] text-red-600 mt-1">
+                        {String(fieldErrors.gender)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Blood Group <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={bloodGroup}
+                      onChange={(e) => setBloodGroup(e.target.value)}
+                      className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none ${
+                        fieldErrors.bloodGroup
+                          ? "border-red-400 focus:border-red-500"
+                          : "border-gray-300 focus:border-blue-500"
+                      }`}
+                    >
+                      <option value="" disabled>
+                        Select Blood Group
+                      </option>
+                      {bloodGroups.map((bg) => (
+                        <option key={bg} value={bg}>
+                          {bg}
+                        </option>
+                      ))}
+                    </select>
+                    {fieldErrors.bloodGroup && (
+                      <div className="text-[11px] text-red-600 mt-1">
+                        {String(fieldErrors.bloodGroup)}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Mobile Number <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      value={mobile}
+                      onChange={(e) => setMobile(e.target.value)}
+                      type="tel"
+                      className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none ${
+                        fieldErrors.phone || fieldErrors.mobile
+                          ? "border-red-400 focus:border-red-500"
+                          : "border-gray-300 focus:border-blue-500"
+                      }`}
+                      placeholder="Enter Mobile Number"
+                    />
+                    {(fieldErrors.phone || fieldErrors.mobile) && (
+                      <div className="text-[11px] text-red-600 mt-1">
+                        {String(fieldErrors.phone || fieldErrors.mobile)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email ID
+                  </label>
+                  <input
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    type="email"
+                    className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none ${
+                      fieldErrors.email || fieldErrors.emailId
+                        ? "border-red-400 focus:border-red-500"
+                        : "border-gray-300 focus:border-blue-500"
+                    }`}
+                    placeholder="Enter Email"
+                  />
+                  {(fieldErrors.email || fieldErrors.emailId) && (
+                    <div className="text-[11px] text-red-600 mt-1">
+                      {String(fieldErrors.email || fieldErrors.emailId)}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+            <div className="mb-3 mt-3">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Appointment Type <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={apptType}
+                onChange={(e) => setApptType(e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+              >
+                {suggestions.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+              <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                {suggestions.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className="px-2 py-1 rounded border border-gray-200 text-gray-700 hover:bg-gray-50"
+                    onClick={() => setApptType(s)}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="mb-3">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Reason for Visit <span className="text-red-500">*</span>
+              </label>
+              <input
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                type="text"
+                className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none ${
+                  fieldErrors.reason || fieldErrors.reasonForVisit
+                    ? "border-red-400 focus:border-red-500"
+                    : "border-gray-300 focus:border-blue-500"
+                }`}
+                placeholder="Enter Reason for Visit"
+              />
+              {(fieldErrors.reason || fieldErrors.reasonForVisit) && (
+                <div className="text-[11px] text-red-600 mt-1">
+                  {String(fieldErrors.reason || fieldErrors.reasonForVisit)}
+                </div>
+              )}
+              <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                {reasonSuggestions.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className="px-2 py-1 rounded border border-gray-200 text-gray-700 hover:bg-gray-50"
+                    onClick={() => setReason(s)}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Appointment Date <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={apptDate}
+                    onChange={(e) => setApptDate(e.target.value)}
+                    placeholder="YYYY-MM-DD"
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm pr-8 focus:outline-none focus:border-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowApptDateCalendar(!showApptDateCalendar)
+                    }
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500"
+                  >
+                    <img
+                      src={calendarMinimalistic}
+                      alt="Calendar"
+                      className="w-4 h-4"
+                    />
+                  </button>
+                  {showApptDateCalendar && (
+                    <div className="shadcn-calendar-dropdown absolute z-[9999] mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
+                      <ShadcnCalendar
+                        mode="single"
+                        selected={apptDate ? new Date(apptDate) : undefined}
+                        onSelect={(date) => {
+                          if (date) {
+                            const year = date.getFullYear();
+                            const month = String(date.getMonth() + 1).padStart(
+                              2,
+                              "0"
+                            );
+                            const day = String(date.getDate()).padStart(2, "0");
+                            setApptDate(`${year}-${month}-${day}`);
+                          }
+                          setShowApptDateCalendar(false);
+                        }}
+                        captionLayout="dropdown"
+                        fromYear={new Date().getFullYear() - 1}
+                        toYear={new Date().getFullYear() + 1}
+                        className="rounded-md"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div>
+                {(() => {
+                  const all = [
+                    ...(grouped.morning || []),
+                    ...(grouped.afternoon || []),
+                    ...(grouped.evening || []),
+                    ...(grouped.night || []),
+                  ];
+                  let current = null;
+                  if (selectedSlotId) {
+                    current =
+                      all.find(
+                        (s) => (s.id || s.slotId || s._id) === selectedSlotId
+                      ) || null;
+                  } else {
+                    const g = grouped[bucketKey] || [];
+                    current = g[0] || null;
+                  }
+                  const avail =
+                    current?.availableTokens ??
+                    current?.tokensAvailable ??
+                    current?.remainingTokens ??
+                    current?.available ??
+                    current?.tokensLeft;
+                  const total =
+                    current?.totalTokens ??
+                    current?.capacity ??
+                    current?.maxTokens;
+                  const label =
+                    (avail ?? "") !== ""
+                      ? `${avail}${
+                          total != null ? ` of ${total}` : ""
+                        } Tokens available`
+                      : loadingSlots
+                      ? "Loading slots…"
+                      : slotsError
+                      ? "Slots unavailable"
+                      : "Tokens info unavailable";
+                  return (
+                    <div className="flex items-center justify-between">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Available Slot <span className="text-red-500">*</span>
+                      </label>
+                      <span
+                        className={`text-xs ${
+                          avail > 0 ? "text-green-600" : "text-amber-600"
+                        }`}
+                      >
+                        {label}
+                      </span>
+                    </div>
+                  );
+                })()}
+                <select
+                  className={`w-full rounded-md border px-3 py-2 text-sm ${
+                    fieldErrors.slotId
+                      ? "border-red-400 focus:border-red-500"
+                      : "border-gray-300 focus:border-blue-500"
+                  }`}
+                  value={bucketKey}
+                  onChange={(e) => {
+                    const key = e.target.value;
+                    setBucketKey(key);
+                    const group = grouped[key] || [];
+                    if (group.length) {
+                      const first = group[0];
+                      const id = first.id || first.slotId || first._id;
+                      setSelectedSlotId(id || null);
+                    } else {
+                      setSelectedSlotId(null);
+                    }
+                  }}
+                >
+                  {timeBuckets.map((t) => (
+                    <option key={t.key} value={t.key}>
+                      {t.label} ({t.time})
+                    </option>
+                  ))}
+                </select>
+                {fieldErrors.slotId && (
+                  <div className="mt-1 text-[11px] text-red-600">
+                    {String(fieldErrors.slotId)}
+                  </div>
+                )}
+                {!selectedSlotId && (
+                  <div className="mt-2 text-xs text-amber-600">
+                    {loadingSlots
+                      ? "Loading slots for date…"
+                      : "Select a slot to enable booking."}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
+const Queue = () => {
+  const [slotEnding, setSlotEnding] = useState(false);
+  // Queue is restricted to Checked-In only for both Doctor & FD views
+  const [activeFilter, setActiveFilter] = useState("All");
+  const [currentDate, setCurrentDate] = useState(new Date());
+  // Auth
+  const { doctorDetails, doctorLoading, fetchDoctorDetails } = useAuthStore();
+  useEffect(() => {
+    if (!doctorDetails && !doctorLoading && fetchDoctorDetails) {
+      fetchDoctorDetails(getDoctorMe);
+    }
+  }, [doctorDetails, doctorLoading, fetchDoctorDetails]);
+  const doctorId = doctorDetails?.userId || doctorDetails?.id;
+  const clinicId =
+    doctorDetails?.associatedWorkplaces?.clinic?.id || doctorDetails?.clinicId;
+  const hospitalId =
+    (Array.isArray(doctorDetails?.associatedWorkplaces?.hospitals) &&
+      doctorDetails?.associatedWorkplaces?.hospitals[0]?.id) ||
+    undefined;
+
+  // Slot store
+  const {
+    slots,
+    slotsLoading,
+    selectedSlotId,
+    selectSlot,
+    loadSlots,
+    loadAppointmentsForSelectedSlot,
+    slotAppointments,
+  } = useSlotStore();
+  useEffect(() => {
+    if (!doctorId || !clinicId) return;
+    const d = currentDate;
+    const dateIso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}-${String(d.getDate()).padStart(2, "0")}`;
+    loadSlots({ doctorId, date: dateIso, clinicId, hospitalId });
+  }, [doctorId, clinicId, hospitalId, currentDate, loadSlots]);
+  useEffect(() => {
+    if (selectedSlotId) {
+      loadAppointmentsForSelectedSlot();
+    }
+  }, [selectedSlotId, loadAppointmentsForSelectedSlot]);
+
+  // Queue derived from slotAppointments (declared early, mapped later to avoid TDZ on sessionStarted)
+  const [queueData, setQueueData] = useState([]);
+
+  // Session + patient timer
+  const [sessionStarted, setSessionStarted] = useState(false);
+  const [slotStarting, setSlotStarting] = useState(false);
+  const [startError, setStartError] = useState(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  // Pin the currently active token when a session is running so UI interactions don't change it
+  const pinnedTokenRef = useRef(null);
+  const [runStartAt, setRunStartAt] = useState(null);
+  const [baseElapsed, setBaseElapsed] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+  const wasRunningOnPauseRef = useRef(false);
+  const [queuePaused, setQueuePaused] = useState(false);
+  const [pauseEndsAt, setPauseEndsAt] = useState(null);
+  const [pauseRemaining, setPauseRemaining] = useState(0);
+  const pauseTickerRef = useRef(null);
+  const autoResumeTimerRef = useRef(null);
+  const [showPauseModal, setShowPauseModal] = useState(false);
+  const [pauseMinutes, setPauseMinutes] = useState(null);
+  const [pauseSubmitting, setPauseSubmitting] = useState(false);
+  const [pauseError, setPauseError] = useState("");
+  const [resumeSubmitting, setResumeSubmitting] = useState(false);
+  const [resumeError, setResumeError] = useState("");
+  // Backend-reported current token and active patient details to align active selection/UI
+  const [backendCurrentToken, setBackendCurrentToken] = useState(null);
+  const [backendActiveDetails, setBackendActiveDetails] = useState(null);
+
+  const activePatient = useMemo(
+    () => queueData[currentIndex] || null,
+    [queueData, currentIndex]
+  );
+  const activeUIDetails = useMemo(() => {
+    const b = backendActiveDetails;
+    if (b && (b.tokenNumber != null || b.patientId)) {
+      const fullName =
+        [b.firstName, b.lastName].filter(Boolean).join(" ") || "Patient";
+      const genderMap = { MALE: "M", FEMALE: "F", OTHER: "O" };
+      let ageStr = "";
+      try {
+        if (b.dob) {
+          const d = new Date(b.dob);
+          const dd = String(d.getDate()).padStart(2, "0");
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const yyyy = d.getFullYear();
+          const now = new Date();
+          let age =
+            now.getFullYear() -
+            yyyy -
+            (now < new Date(now.getFullYear(), d.getMonth(), d.getDate())
+              ? 1
+              : 0);
+          ageStr = `${dd}/${mm}/${yyyy} (${age}Y)`;
+        }
+      } catch {}
+      return {
+        patientName: fullName,
+        gender:
+          genderMap[(b.gender || "").toUpperCase()] ||
+          (b.gender || "—")[0] ||
+          "—",
+        age: ageStr,
+        token: b.tokenNumber,
+        reasonForVisit: b.reason || "",
+        appointmentStatus: b.appointmentStatus || "",
+        startedAt: b.startedAt || null,
+      };
+    }
+    return activePatient
+      ? {
+          patientName: activePatient.patientName,
+          gender: activePatient.gender,
+          age: activePatient.age,
+          token: activePatient.token,
+          reasonForVisit: activePatient.reasonForVisit,
+          appointmentStatus: activePatient.status,
+          startedAt: activePatient.startedAt,
+        }
+      : null;
+  }, [backendActiveDetails, activePatient]);
+
+  // Timer interval
+  useEffect(() => {
+    if (!runStartAt || !sessionStarted || queuePaused) {
+      setElapsed(baseElapsed);
+      return;
+    }
+    const id = setInterval(() => {
+      setElapsed(
+        baseElapsed + Math.max(0, Math.floor((Date.now() - runStartAt) / 1000))
+      );
+    }, 1000);
+    setElapsed(
+      baseElapsed + Math.max(0, Math.floor((Date.now() - runStartAt) / 1000))
+    );
+    return () => clearInterval(id);
+  }, [runStartAt, sessionStarted, queuePaused, baseElapsed]);
+  const formatTime = (s) =>
+    `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(
+      2,
+      "0"
+    )}`;
+
+  // Slot status auto-sync (poll every 45s with in-flight guard) and timer sync from backend
+  useEffect(() => {
+    let ignore = false;
+    let inFlight = false;
+    const sync = async () => {
+      if (!selectedSlotId || inFlight) return;
+      inFlight = true;
+      try {
+        const st = await getSlotEtaStatus(selectedSlotId);
+        if (ignore) return;
+        const msg = st?.message || {};
+        const started =
+          msg?.slotStatus === "STARTED" ||
+          !!(st?.started || st?.inProgress || st?.active);
+        if (typeof msg?.currentToken === "number") {
+          setBackendCurrentToken(msg.currentToken);
+        }
+        // Capture backend active details and sync timer
+        if (msg?.activePatientDetails) {
+          setBackendActiveDetails(msg.activePatientDetails);
+          const iso = msg.activePatientDetails.startedAt;
+          if (iso) {
+            const ts = new Date(iso).getTime();
+            if (!isNaN(ts)) {
+              const drift = Math.abs(
+                Date.now() - ts - (runStartAt ? Date.now() - runStartAt : 0)
+              );
+              if (!runStartAt || drift > 1500) {
+                setRunStartAt(ts);
+                const secs = Math.floor((Date.now() - ts) / 1000);
+                setBaseElapsed(secs);
+                setElapsed(secs);
+              }
+            }
+          }
+        }
+        if (started !== sessionStarted) {
+          if (started) {
+            setSessionStarted(true);
+            setQueuePaused(false);
+            try {
+              await loadAppointmentsForSelectedSlot();
+            } catch {}
+          } else {
+            setSessionStarted(false);
+            setRunStartAt(null);
+            setBaseElapsed(0);
+            setElapsed(0);
+            setBackendActiveDetails(null);
+          }
+        }
+      } catch {
+      } finally {
+        inFlight = false;
+      }
+    };
+    sync();
+    const id = setInterval(sync, 45000);
+    return () => {
+      ignore = true;
+      clearInterval(id);
+    };
+  }, [
+    selectedSlotId,
+    sessionStarted,
+    loadAppointmentsForSelectedSlot,
+    runStartAt,
+  ]);
+
+  // Map appointments to queueData after sessionStarted & backend token state available
+  useEffect(() => {
+    const categories = slotAppointments?.appointments;
+    if (!categories) {
+      setQueueData([]);
+      return;
+    }
+    const engaged = categories.engaged || [];
+    const checked = categories.checkedIn || [];
+    const admitted = categories.admitted || [];
+    const mapAppt = (appt) => {
+      if (!appt) return null;
+      const p = appt.patientDetails || appt.patient || {};
+      const name =
+        p.name ||
+        [p.firstName, p.lastName].filter(Boolean).join(" ") ||
+        "Patient";
+      const genderRaw = p.gender || appt.gender || "";
+      const gender = genderRaw ? genderRaw[0].toUpperCase() : "—";
+      let ageStr = "";
+      try {
+        if (p.dob) {
+          const d = new Date(p.dob);
+          const dd = String(d.getDate()).padStart(2, "0");
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const yyyy = d.getFullYear();
+          const now = new Date();
+          let age =
+            now.getFullYear() -
+            yyyy -
+            (now < new Date(now.getFullYear(), d.getMonth(), d.getDate())
+              ? 1
+              : 0);
+          ageStr = `${dd}/${mm}/${yyyy} (${age}Y)`;
+        }
+      } catch {}
+      const apptTypeMap = {
+        NEW: "New Consultation",
+        FOLLOW_UP: "Follow-up Consultation",
+        REVIEW: "Review Visit",
+        SECOND_OPINION: "Second Opinion",
+      };
+      const appointmentType =
+        apptTypeMap[appt.appointmentType] ||
+        appt.appointmentType ||
+        "Consultation";
+      const expectedTime = appt.expectedTime
+        ? new Date(appt.expectedTime).toLocaleTimeString([], {
+            hour: "numeric",
+            minute: "2-digit",
+          })
+        : "";
+      const bookingType =
+        appt.bookingMode === "ONLINE"
+          ? "Online"
+          : appt.bookingMode === "WALK_IN"
+          ? "Walk-In"
+          : appt.bookingType || "";
+      const reason = appt.reason || appt.reasonForVisit || "";
+      return {
+        id: appt.id || appt.appointmentId,
+        token:
+          appt.tokenNo != null
+            ? Number(appt.tokenNo)
+            : appt.token != null
+            ? Number(appt.token)
+            : undefined,
+        patientName: name,
+        gender,
+        age: ageStr,
+        appointmentType,
+        expectedTime,
+        bookingType,
+        reasonForVisit: reason,
+        status: appt.status || "Waiting",
+        startedAt: appt.startedAt || null,
+      };
+    };
+    // Force queue to Checked-In only regardless of filter selection
+    const base = checked;
+    const mapped = base.map(mapAppt).filter(Boolean);
+    setQueueData(mapped);
+    // Maintain current token selection: prefer backend currentToken, else pinned token during session
+    let desiredToken = null;
+    if (backendCurrentToken != null) {
+      desiredToken = Number(backendCurrentToken);
+    } else if (sessionStarted && pinnedTokenRef.current != null) {
+      desiredToken = Number(pinnedTokenRef.current);
+    }
+    if (desiredToken != null) {
+      const idx = mapped.findIndex(
+        (item) => Number(item?.token) === desiredToken
+      );
+      if (idx >= 0) {
+        setCurrentIndex(idx);
+      }
+      // clear backend token once applied
+      if (backendCurrentToken != null) setBackendCurrentToken(null);
+    }
+    // Sync timer with backend startedAt if available
+    if (categories && categories.engaged && categories.engaged.length > 0) {
+      const active = categories.engaged[0];
+      if (active && active.startedAt) {
+        const backendStart = new Date(active.startedAt).getTime();
+        setRunStartAt(backendStart);
+        setBaseElapsed(Math.floor((Date.now() - backendStart) / 1000));
+      }
+    }
+  }, [slotAppointments, sessionStarted, backendCurrentToken, activeFilter]);
+
+  // Listen to cross-view custom event dispatched by FD queue
+  useEffect(() => {
+    const handler = (e) => {
+      const { slotId, started } = e.detail || {};
+      if (!slotId || slotId !== selectedSlotId) return;
+      if (started) {
+        if (!sessionStarted) {
+          setSessionStarted(true);
+          setQueuePaused(false);
+        }
+      } else {
+        if (sessionStarted) {
+          setSessionStarted(false);
+          setRunStartAt(null);
+          setBaseElapsed(0);
+          setElapsed(0);
+        }
+      }
+    };
+    window.addEventListener("slot-session-status", handler);
+    return () => window.removeEventListener("slot-session-status", handler);
+  }, [selectedSlotId, sessionStarted]);
+
+  // Poll appointments every 15s
+  // Poll appointments for selected slot every 45s (aligned with FD) to avoid excessive API calls
+  useEffect(() => {
+    if (!selectedSlotId) return;
+    const id = setInterval(() => {
+      loadAppointmentsForSelectedSlot();
+    }, 45000);
+    return () => clearInterval(id);
+  }, [selectedSlotId, loadAppointmentsForSelectedSlot]);
+
+  // Auto-start first patient session when slot session active.
+  // Guard conditions ensure: slot session started, timer not already running, there is at least one checked-in patient (queueData.length > 0), and a slot is selected.
+  // This prevents triggering when no patients are checked in (doctor should only see checked-in list).
+  useEffect(() => {
+    if (
+      sessionStarted &&
+      !runStartAt &&
+      queueData.length > 0 &&
+      selectedSlotId
+    ) {
+      const first = queueData[0];
+      if (first?.token != null) {
+        startPatientSessionEta(selectedSlotId, first.token)
+          .then(() => {
+            setRunStartAt(Date.now());
+            pinnedTokenRef.current = first.token;
+          })
+          .catch((e) =>
+            console.error(
+              "Auto patient start failed",
+              e?.response?.data || e.message
+            )
+          );
+      }
+    }
+  }, [sessionStarted, runStartAt, queueData, selectedSlotId]);
+
+  const handleToggleSession = async () => {
+    if (sessionStarted) {
+      // end
+      setSlotEnding(true);
+      // Keep toggle ON but disabled while ending
+      // Remove session only after API response
+      try {
+        if (
+          runStartAt &&
+          activePatient &&
+          selectedSlotId &&
+          activePatient.token != null
+        ) {
+          await endPatientSessionEta(selectedSlotId, activePatient.token);
+        }
+      } catch (e) {
+        console.error("End patient ETA failed", e?.response?.data || e.message);
+      }
+      try {
+        if (selectedSlotId) {
+          await endSlotEta(selectedSlotId);
+        }
+        setSessionStarted(false);
+        setQueuePaused(false);
+        setRunStartAt(null);
+        setBaseElapsed(0);
+        setElapsed(0);
+        wasRunningOnPauseRef.current = false;
+        setCurrentIndex(0);
+        pinnedTokenRef.current = null;
+      } catch (e) {
+        console.error("End slot ETA failed", e?.response?.data || e.message);
+        // Optionally show error and keep sessionStarted true
+      } finally {
+        setSlotEnding(false);
+      }
+      return;
+    }
+    if (!selectedSlotId) {
+      setStartError("Select a slot first");
+      return;
+    }
+    setSlotStarting(true);
+    setStartError(null);
+    setQueuePaused(false);
+    setRunStartAt(null);
+    setBaseElapsed(0);
+    setElapsed(0);
+    wasRunningOnPauseRef.current = false;
+    setCurrentIndex(0);
+    try {
+      await startSlotEta(selectedSlotId);
+      setSessionStarted(true);
+      const first = queueData[0];
+      if (first?.token != null) pinnedTokenRef.current = first.token;
+    } catch (e) {
+      console.error("Start slot failed", e?.response?.data || e.message);
+      setStartError("Failed to start");
+      setSessionStarted(false);
+    } finally {
+      setSlotStarting(false);
+    }
+  };
+
+  const completeCurrentPatient = async () => {
+    const active = activePatient;
+    if (!active || !selectedSlotId) return;
+    try {
+      await endPatientSessionEta(selectedSlotId, active.token);
+    } catch (e) {
+      console.error("End patient ETA failed", e?.response?.data || e.message);
+    }
+    try {
+      await loadAppointmentsForSelectedSlot();
+    } catch {}
+    setRunStartAt(null);
+    setBaseElapsed(0);
+    setElapsed(0);
+    wasRunningOnPauseRef.current = false;
+    setCurrentIndex(0);
+    // Unpin token after completion so next auto-select uses first checked-in
+    pinnedTokenRef.current = null;
+  };
+
+  // Doctor actions: Mark No-Show from actions menu, then refresh the slot appointments
+  const handleMarkNoShow = async (row) => {
+    try {
+      let id = row?.id;
+      if (!id) {
+        const found = queueData.find((p) => p.token === row?.token);
+        id = found?.id;
+      }
+      if (!id) return;
+      await markNoShowAppointment(id);
+      if (selectedSlotId) {
+        await loadAppointmentsForSelectedSlot();
+      }
+    } catch (e) {
+      console.error("No-show failed", e?.response?.data || e.message);
+    }
+  };
+
+  // Pause handling
+  useEffect(() => {
+    if (!queuePaused || !pauseEndsAt) return;
+    const tick = () => {
+      setPauseRemaining(
+        Math.max(0, Math.floor((pauseEndsAt - Date.now()) / 1000))
+      );
+    };
+    tick();
+    pauseTickerRef.current = setInterval(tick, 1000);
+    return () => {
+      if (pauseTickerRef.current) {
+        clearInterval(pauseTickerRef.current);
+        pauseTickerRef.current = null;
+      }
+    };
+  }, [queuePaused, pauseEndsAt]);
+  const resumeQueue = async () => {
+    if (!selectedSlotId) return;
+    setResumeError("");
+    setResumeSubmitting(true);
+    try {
+      await resumeSlotEta(selectedSlotId);
+      if (autoResumeTimerRef.current) {
+        clearTimeout(autoResumeTimerRef.current);
+        autoResumeTimerRef.current = null;
+      }
+      if (pauseTickerRef.current) {
+        clearInterval(pauseTickerRef.current);
+        pauseTickerRef.current = null;
+      }
+      setPauseEndsAt(null);
+      setPauseRemaining(0);
+      if (wasRunningOnPauseRef.current) setRunStartAt(Date.now());
+      setQueuePaused(false);
+    } catch (e) {
+      setResumeError(
+        e?.response?.data?.message || e.message || "Failed to resume"
+      );
+    } finally {
+      setResumeSubmitting(false);
+    }
+  };
+
+  const handlePauseConfirm = async () => {
+    if (!pauseMinutes || !selectedSlotId) return;
+    setPauseError("");
+    setPauseSubmitting(true);
+    try {
+      const resp = await pauseSlotEta(selectedSlotId, pauseMinutes);
+      const serverEnds = resp?.data?.pauseEndsAt || resp?.pauseEndsAt || null;
+      const wasRunning = !!runStartAt;
+      if (wasRunning) {
+        const delta = Math.floor((Date.now() - runStartAt) / 1000);
+        setBaseElapsed((b) => b + Math.max(0, delta));
+        setRunStartAt(null);
+      }
+      wasRunningOnPauseRef.current = wasRunning;
+      setQueuePaused(true);
+      setShowPauseModal(false);
+      const ends = serverEnds
+        ? new Date(serverEnds).getTime()
+        : Date.now() + pauseMinutes * 60 * 1000;
+      setPauseEndsAt(ends);
+      setPauseRemaining(Math.max(0, Math.floor((ends - Date.now()) / 1000)));
+      if (autoResumeTimerRef.current)
+        clearTimeout(autoResumeTimerRef.current);
+      autoResumeTimerRef.current = setTimeout(() => {
+        if (wasRunningOnPauseRef.current) setRunStartAt(Date.now());
+        setQueuePaused(false);
+        if (pauseTickerRef.current) {
+          clearInterval(pauseTickerRef.current);
+          pauseTickerRef.current = null;
+        }
+        setPauseEndsAt(null);
+        setPauseRemaining(0);
+        autoResumeTimerRef.current = null;
+      }, pauseMinutes * 60 * 1000);
+    } catch (e) {
+      const msg = e?.response?.data?.message || e.message || "";
+      // If backend requires ending current patient first, do it automatically then retry pause
+      if (
+        msg.includes(
+          "Cannot pause session while a patient is currently being served"
+        )
+      ) {
+        try {
+          if (selectedSlotId && activePatient?.token != null) {
+            await endPatientSessionEta(selectedSlotId, activePatient.token);
+            await loadAppointmentsForSelectedSlot();
+          }
+          const resp2 = await pauseSlotEta(selectedSlotId, pauseMinutes);
+          const serverEnds =
+            resp2?.data?.pauseEndsAt || resp2?.pauseEndsAt || null;
+          const wasRunning = !!runStartAt;
+          if (wasRunning) {
+            const delta = Math.floor((Date.now() - runStartAt) / 1000);
+            setBaseElapsed((b) => b + Math.max(0, delta));
+            setRunStartAt(null);
+          }
+          wasRunningOnPauseRef.current = wasRunning;
+          setQueuePaused(true);
+          setShowPauseModal(false);
+          const ends = serverEnds
+            ? new Date(serverEnds).getTime()
+            : Date.now() + pauseMinutes * 60 * 1000;
+          setPauseEndsAt(ends);
+          setPauseRemaining(
+            Math.max(0, Math.floor((ends - Date.now()) / 1000))
+          );
+          if (autoResumeTimerRef.current)
+            clearTimeout(autoResumeTimerRef.current);
+          autoResumeTimerRef.current = setTimeout(() => {
+            if (wasRunningOnPauseRef.current) setRunStartAt(Date.now());
+            setQueuePaused(false);
+            if (pauseTickerRef.current) {
+              clearInterval(pauseTickerRef.current);
+              pauseTickerRef.current = null;
+            }
+            setPauseEndsAt(null);
+            setPauseRemaining(0);
+            autoResumeTimerRef.current = null;
+          }, pauseMinutes * 60 * 1000);
+        } catch (e2) {
+          setPauseError(
+            e2?.response?.data?.message || e2.message || "Failed to pause"
+          );
+        }
+      } else {
+        setPauseError(msg || "Failed to pause");
+      }
+    } finally {
+      setPauseSubmitting(false);
+    }
+  };
+
+  // Show all tabs as before, but queue remains bound to Checked-In.
+  const filters = ["All", "Checked In", "Engaged", "No Show", "Admitted"];
+  const getFilterCount = (filter) => {
+    const categories = slotAppointments?.appointments || {};
+    const checkedIn = Array.isArray(categories.checkedIn)
+      ? categories.checkedIn.length
+      : 0;
+    const engaged = Array.isArray(categories.engaged)
+      ? categories.engaged.length
+      : 0;
+    const noShow = Array.isArray(categories.noShow)
+      ? categories.noShow.length
+      : 0;
+    const admitted = Array.isArray(categories.admitted)
+      ? categories.admitted.length
+      : 0;
+    const all = checkedIn + engaged + noShow + admitted; // exclude inWaiting from All
+    switch (filter) {
+      case "Checked In":
+        return checkedIn;
+      case "Engaged":
+        return engaged;
+      case "No Show":
+        return noShow;
+      case "Admitted":
+        return admitted;
+      case "All":
+        return all;
+      default:
+        return 0;
+    }
+  };
+
+  // Slot dropdown UI from slots
+  const [slotOpen, setSlotOpen] = useState(false);
+  const slotAnchorRef = useRef(null);
+  const slotMenuRef = useRef(null);
+  const [slotPos, setSlotPos] = useState({ top: 0, left: 0, width: 360 });
+  // Topbar actions (three-dot) dropdown
+  const [actionMenuOpen, setActionMenuOpen] = useState(false);
+  const actionAnchorRef = useRef(null);
+  const actionMenuRef = useRef(null);
+  const [actionPos, setActionPos] = useState({ top: 0, left: 0, width: 220 });
+  // Group slots into day parts similar to FD
+  const groupedSlots = useMemo(() => {
+    const groups = { morning: [], afternoon: [], evening: [], night: [] };
+    (slots || []).forEach((s) => {
+      const part = classifyISTDayPart(
+        s.startTime || s.slotStartTime || s.start || s.timeStart
+      );
+      if (groups[part]) groups[part].push(s);
+    });
+    return groups;
+  }, [slots]);
+  const timeSlots = useMemo(() => {
+    const arr = [];
+    if (groupedSlots.morning.length) {
+      const f = groupedSlots.morning[0],
+        l = groupedSlots.morning[groupedSlots.morning.length - 1];
+      arr.push({
+        key: "morning",
+        label: "Morning",
+        time: buildISTRangeLabel(
+          f.startTime || f.slotStartTime,
+          l.endTime || l.slotEndTime
+        ),
+        Icon: morningQueue,
+      });
+    }
+    if (groupedSlots.afternoon.length) {
+      const f = groupedSlots.afternoon[0],
+        l = groupedSlots.afternoon[groupedSlots.afternoon.length - 1];
+      arr.push({
+        key: "afternoon",
+        label: "Afternoon",
+        time: buildISTRangeLabel(
+          f.startTime || f.slotStartTime,
+          l.endTime || l.slotEndTime
+        ),
+        Icon: afternoonQueue,
+      });
+    }
+    if (groupedSlots.evening.length) {
+      const f = groupedSlots.evening[0],
+        l = groupedSlots.evening[groupedSlots.evening.length - 1];
+      arr.push({
+        key: "evening",
+        label: "Evening",
+        time: buildISTRangeLabel(
+          f.startTime || f.slotStartTime,
+          l.endTime || l.slotEndTime
+        ),
+        Icon: eveningQueue,
+      });
+    }
+    if (groupedSlots.night.length) {
+      const f = groupedSlots.night[0],
+        l = groupedSlots.night[groupedSlots.night.length - 1];
+      arr.push({
+        key: "night",
+        label: "Night",
+        time: buildISTRangeLabel(
+          f.startTime || f.slotStartTime,
+          l.endTime || l.slotEndTime
+        ),
+        Icon: nightQueue,
+      });
+    }
+    return arr;
+  }, [groupedSlots]);
+  const [slotValue, setSlotValue] = useState("morning");
+  const [showWalkIn, setShowWalkIn] = useState(false);
+  useEffect(() => {
+    const onClick = (e) => {
+      if (
+        slotAnchorRef.current?.contains(e.target) ||
+        slotMenuRef.current?.contains(e.target)
+      )
+        return;
+      if (
+        actionAnchorRef.current?.contains(e.target) ||
+        actionMenuRef.current?.contains(e.target)
+      )
+        return;
+      setSlotOpen(false);
+      setActionMenuOpen(false);
+    };
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        setSlotOpen(false);
+        setActionMenuOpen(false);
+      }
+    };
+    window.addEventListener("mousedown", onClick);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("mousedown", onClick);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, []);
+
+  return (
+    <>
+      <div className="h-screen overflow-hidden bg-gray-50">
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-1 flex items-center">
+          <div className="relative mr-6" ref={slotAnchorRef}>
+            <button
+              type="button"
+              className="flex items-center bg-white rounded-md px-3  text-sm text-gray-700 hover:bg-gray-50"
+              onClick={(e) => {
+                setSlotOpen((v) => !v);
+                const r = e.currentTarget.getBoundingClientRect();
+                const width = 360;
+                const left = Math.max(
+                  8,
+                  Math.min(r.left, window.innerWidth - width - 8)
+                );
+                const top = Math.min(r.bottom + 8, window.innerHeight - 8 - 4);
+                setSlotPos({ top, left, width });
+              }}
+            >
+              <span className="text-secondary-grey400 mr-1">
+                {timeSlots.find((t) => t.key === slotValue)?.label || "Morning"}
+              </span>
+              <span className="text-secondary-grey400 py-2 border-gray-300">
+                ({timeSlots.find((t) => t.key === slotValue)?.time || ""})
+              </span>
+              <div className="w-[0.5px] h-5 bg-secondary-grey150 ml-2"></div>
+              <img src={angelDown} alt="down" className="ml-2 h-3 w-3" />
+            </button>
+            {slotOpen &&
+              createPortal(
+                <div
+                  ref={slotMenuRef}
+                  className="fixed z-[9999]"
+                  style={{
+                    top: slotPos.top,
+                    left: slotPos.left,
+                  }}
+                >
+                  <div className="bg-white rounded-xl border border-gray-200 shadow-xl overflow-hidden">
+                    <ul className="py-2 px-2">
+                      {timeSlots.map(({ key, label, time, Icon }, idx) => (
+                        <li key={key}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSlotValue(key);
+                              const group = groupedSlots[key] || [];
+                              if (group.length) {
+                                const first = group[0];
+                                const id =
+                                  first.id || first.slotId || first._id || null;
+                                if (id) selectSlot(id);
+                              }
+                              setSlotOpen(false);
+                            }}
+                            className={`w-full text-left px-3 py-2.5 flex items-center gap-3 rounded-lg hover:bg-blue-50 ${
+                              slotValue === key ? "bg-[#2372EC] text-white" : ""
+                            }`}
+                          >
+                            <img
+                              src={Icon}
+                              alt={label}
+                              className={`${
+                                slotValue === key ? "text-white" : ""
+                              } w-7 h-7`}
+                            />
+
+                            <span className="flex items-center gap-2">
+                              <span
+                                className={`text-[14px] font-semibold ${
+                                  slotValue === key
+                                    ? "text-white"
+                                    : "text-secondary-grey400"
+                                }`}
+                              >
+                                {label}
+                              </span>
+                              <span
+                                className={`text-[13px] ${
+                                  slotValue === key
+                                    ? "text-white/90"
+                                    : "text-secondary-grey300"
+                                }`}
+                              >
+                                ({time})
+                              </span>
+                            </span>
+                          </button>
+                          {idx < timeSlots.length - 1 && (
+                            <div className="h-px bg-gray-200 mx-4" />
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>,
+                document.body
+              )}
+          </div>
+          <div className="flex-1 flex justify-center">
+            <QueueDatePicker date={currentDate} onChange={setCurrentDate} />
+          </div>
+          <div className="flex ml-auto items-center gap-4">
+            {(() => {
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const current = new Date(currentDate);
+              current.setHours(0, 0, 0, 0);
+              return current.getTime() !== today.getTime() ? (
+                <>
+                  <button
+                    onClick={() => setCurrentDate(new Date())}
+                    className="px-2 py-1 font-inter font-normal text-[14px] leading-[120%] text-secondary-grey400 hover:text-blue-primary250 transition-colors group"
+                  >
+                    <span className="flex items-center gap-1.5 border-b-[1.5px] border-transparent group-hover:border-dashed group-hover:border-blue-primary250">
+                      <img
+                        src={queueUndo}
+                        alt="Back to Today"
+                        className="w-3 h-3 group-hover:hidden"
+                      />
+                      <img
+                        src={calenderUndo}
+                        alt="Back to Today"
+                        className="w-4 h-4 hidden group-hover:block"
+                      />
+                      <span>Back to Today</span>
+                    </span>
+                  </button>
+                  <div className="w-[0.5px] h-5 bg-secondary-grey150"></div>
+                </>
+              ) : null;
+            })()}
+            <div className="flex gap-2 items-center">
+              <span
+                className="text-secondary-grey300"
+                style={{
+                  fontFamily: "Inter",
+                  fontWeight: 400,
+                  fontSize: "14px",
+                  lineHeight: "120%",
+                  verticalAlign: "middle",
+                }}
+              >
+                Tokens available
+              </span>
+              <span className="px-2 py-1 rounded bg-success-100 font-inter font-normal text-[14px] leading-[120%] text-center text-success-300 border border-transparent hover:border-success-300 hover:border-[0.5px] transition-colors">
+                10 out of 100
+              </span>
+            </div>
+            <img src={vertical} alt="" className="h-6" />
+            <div className="flex items-center gap-2">
+              <Toggle
+                checked={sessionStarted}
+                disabled={slotStarting || slotEnding}
+                onChange={handleToggleSession}
+              />
+              <span
+                className="text-secondary-grey300"
+                style={{
+                  fontFamily: "Inter",
+                  fontWeight: 400,
+                  fontSize: "14px",
+                  lineHeight: "120%",
+                  verticalAlign: "middle",
+                }}
+              >
+                Start Session
+              </span>
+              {slotStarting && (
+                <span className="text-xs text-blue-600 animate-pulse">
+                  Starting
+                </span>
+              )}
+              {slotEnding && (
+                <span className="text-xs text-orange-600 animate-pulse">
+                  Ending
+                </span>
+              )}
+              {startError && !slotStarting && !sessionStarted && (
+                <span className="text-xs text-red-600">{startError}</span>
+              )}
+            </div>
+            <img src={vertical} alt="" className="h-6" />
+            <button
+              type="button"
+              ref={actionAnchorRef}
+              className="relative w-4 h-6 flex items-center justify-center rounded hover:bg-gray-100"
+              onClick={(e) => {
+                setActionMenuOpen((v) => !v);
+                const r = e.currentTarget.getBoundingClientRect();
+                const width = 220;
+                const left = Math.max(
+                  8,
+                  Math.min(r.left - width + 24, window.innerWidth - width - 8)
+                );
+                const top = Math.min(r.bottom + 8, window.innerHeight - 8 - 4);
+                setActionPos({ top, left, width });
+              }}
+            >
+              <img src={action_dot} alt="Actions" className="w-4" />
+            </button>
+            {actionMenuOpen &&
+              createPortal(
+                <div
+                  ref={actionMenuRef}
+                  className="fixed z-[9999]"
+                  style={{
+                    top: actionPos.top,
+                    left: actionPos.left,
+                    width: actionPos.width,
+                  }}
+                >
+                  <div className="bg-white rounded-lg border border-gray-200 shadow-xl overflow-hidden p-2">
+                    <ul className="flex flex-col gap-2">
+                      <li>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            try {
+                              if (selectedSlotId) {
+                                loadAppointmentsForSelectedSlot();
+                              }
+                            } finally {
+                              setActionMenuOpen(false);
+                            }
+                          }}
+                          className="w-full rounded-sm text-left px-2 py-1 flex items-center gap-3 hover:bg-gray-50"
+                        >
+                          <img
+                            src={refresh}
+                            alt="Refresh Queue"
+                            className="w-4 "
+                          />
+                          <span className="text-[14px] text-gray-800">
+                            Refresh Queue
+                          </span>
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            try {
+                              if (sessionStarted) {
+                                handleToggleSession();
+                              }
+                            } finally {
+                              setActionMenuOpen(false);
+                            }
+                          }}
+                          className="w-full text-left px-2 py-1 flex items-center gap-3 hover:bg-red-50"
+                        >
+                          <img
+                            src={terminate}
+                            alt="Terminate Queue"
+                            className="w-4"
+                          />
+                          <span className="text-[14px] text-red-600 font-medium">
+                            Terminate Queue
+                          </span>
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
+                </div>,
+                document.body
+              )}
+          </div>
+        </div>
+
+        <div className="px-0 pt-0 pb-2 h-[calc(100vh-100px)] flex flex-col overflow-hidden no-scrollbar">
+          {sessionStarted && (
+            <div>
+              <div
+                className={`w-full h-[38px] flex items-center relative px-0 rounded-none ${
+                  queuePaused ? "bg-[#FFF4E5]" : ""
+                }`}
+                style={!queuePaused ? { background: "#27CA40" } : {}}
+              >
+                <div className="flex-1 flex items-center justify-center gap-3">
+                  <span
+                    className={`${
+                      queuePaused ? "text-[#92400E]" : "text-monochrom-white"
+                    }`}
+                    style={{
+                      fontFamily: "Inter",
+                      fontWeight: 400,
+                      fontSize: "20px",
+                      lineHeight: "120%",
+                      verticalAlign: "middle",
+                    }}
+                  >
+                    Current Token Number
+                  </span>
+                  <span
+                    className={`inline-flex items-center gap-2 ${
+                      queuePaused ? "text-[#92400E]" : "text-monochrom-white"
+                    }`}
+                    style={{
+                      fontFamily: "Inter",
+                      fontWeight: 700,
+                      fontSize: "20px",
+                      lineHeight: "120%",
+                      textAlign: "center",
+                    }}
+                  >
+                    <span
+                      className={`inline-block w-4 h-4 rounded-full ${
+                        queuePaused
+                          ? "bg-[#FDBA74] border border-[#FDBA74]"
+                          : ""
+                      }`}
+                      style={
+                        !queuePaused
+                          ? {
+                              animation: "blink-dot 1s infinite",
+                            }
+                          : {}
+                      }
+                    ></span>
+                    {String(activePatient?.token ?? 0).padStart(2, "0")}
+                  </span>
+                  {queuePaused && (
+                    <span
+                      className="inline-flex items-center gap-2 text-[#92400E] bg-[#FED7AA] px-2 py-0.5 rounded"
+                      style={{
+                        fontFamily: "Inter",
+                        fontWeight: 500,
+                        fontSize: "12px",
+                        lineHeight: "120%",
+                        verticalAlign: "middle",
+                      }}
+                    >
+                      <span className="inline-block w-2 h-2 rounded-full bg-[#F97316]" />
+                      Paused (
+                      {String(Math.floor(pauseRemaining / 60)).padStart(2, "0")}
+                      :{String(pauseRemaining % 60).padStart(2, "0")})
+                    </span>
+                  )}
+                </div>
+                {!queuePaused ? (
+                  <button
+                    onClick={() => {
+                      setPauseMinutes(null);
+                      setShowPauseModal(true);
+                    }}
+                    className="group absolute right-4 top-1/2 -translate-y-1/2 inline-flex items-center gap-2 h-[32px] min-w-[32px] p-2 rounded-md text-sm bg-error-50 text-error-400 hover:bg-error-400 hover:text-monochrom-white transition-colors"
+                    style={{ border: "0.5px solid #F87171" }}
+                  >
+                    <img
+                      src={pauseIconRed}
+                      alt=""
+                      className="h-4 group-hover:invert group-hover:brightness-0"
+                    />
+                    <span>Pause Queue</span>
+                  </button>
+                ) : (
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col items-end">
+                    <button
+                      onClick={resumeQueue}
+                      disabled={resumeSubmitting}
+                      className={`flex items-center gap-2 bg-blue-600 text-white text-xs font-semibold px-3 py-1.5 rounded border border-blue-600 hover:bg-blue-700 ${
+                        resumeSubmitting ? "opacity-70 cursor-not-allowed" : ""
+                      }`}
+                    >
+                      {resumeSubmitting ? "Resuming…" : "Restart Queue"}
+                    </button>
+                    {resumeError && (
+                      <span className="mt-1 text-[11px] text-red-600">
+                        {resumeError}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="p-2 flex flex-col flex-1 min-h-0">
+            <div className="flex flex-col gap-2">
+              <h3
+                className="text-secondary-grey400"
+                style={{
+                  fontFamily: "Inter",
+                  fontWeight: 500,
+                  fontSize: "20px",
+                  lineHeight: "120%",
+                  verticalAlign: "middle",
+                }}
+              >
+                Overview
+              </h3>
+              {(() => {
+                const categories = slotAppointments?.appointments || {};
+                const checkedInCount = Array.isArray(categories.checkedIn)
+                  ? categories.checkedIn.length
+                  : 0;
+                const engagedCount = Array.isArray(categories.engaged)
+                  ? categories.engaged.length
+                  : 0;
+                const admittedCount = Array.isArray(categories.admitted)
+                  ? categories.admitted.length
+                  : 0;
+                const noShowCount = Array.isArray(categories.noShow)
+                  ? categories.noShow.length
+                  : 0;
+                // All should exclude inWaiting in doctor queue
+                const allCount =
+                  checkedInCount + engagedCount + admittedCount + noShowCount;
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <OverviewStatCard
+                      title="All Appointments"
+                      value={allCount}
+                    />
+                    <OverviewStatCard
+                      title="Checked In"
+                      value={checkedInCount}
+                    />
+                    <OverviewStatCard title="Engaged" value={engagedCount} />
+                    <OverviewStatCard
+                      title="No Show/Cancelled"
+                      value={noShowCount}
+                    />
+                  </div>
+                );
+              })()}
+            </div>
+
+            {sessionStarted && activeUIDetails && (
+              <div className="mb-2 p-2">
+                <h3 className="text-gray-800 font-semibold mb-2">
+                  Active Patient
+                </h3>
+                <div
+                  id="active-patient-card"
+                  className="bg-white rounded-lg border border-blue-200 px-4 py-3 flex items-center justify-between text-sm active-card-enter"
+                >
+                  <div className="flex items-center gap-4 min-w-0">
+                    <AvatarCircle name={activeUIDetails.patientName} size="s" />
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1">
+                          <span className="font-semibold text-gray-900 truncate max-w-[160px]">
+                            {activeUIDetails.patientName}
+                          </span>
+                          <span className="text-gray-400 text-xs leading-none">
+                            ↗
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-gray-500 mt-0.5">
+                          {activeUIDetails.gender} | {activeUIDetails.age}
+                        </div>
+                      </div>
+                      <div className="h-10 w-px bg-gray-200" />
+                      <div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-gray-500">Token Number</span>
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded border border-blue-300 bg-blue-50 text-[11px] font-medium text-blue-700">
+                            {activeUIDetails.token}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 text-gray-500">
+                          <span>Reason :</span>
+                          <span className="font-xs whitespace-nowrap text-gray-700">
+                            {activeUIDetails.reasonForVisit}
+                          </span>
+                        </div>
+                        {/* Removed ENGAGED status badge from UI as requested */}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0 pl-4">
+                    <div className="inline-flex items-center gap-1 rounded-md border border-green-200 bg-green-50 px-2 py-1 text-[12px] font-medium text-green-700">
+                      <span className="inline-block w-2 h-2 rounded-full bg-green-500" />
+                      {formatTime(elapsed)}
+                    </div>
+                    {runStartAt ? (
+                      <button
+                        onClick={completeCurrentPatient}
+                        className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        End Session
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setRunStartAt(Date.now());
+                          if (activeUIDetails?.token != null)
+                            pinnedTokenRef.current = activeUIDetails.token;
+                        }}
+                        className="inline-flex items-center rounded-md border border-blue-300 bg-blue-600 text-white px-3 py-1.5 text-sm font-medium hover:bg-blue-700 transition-colors"
+                      >
+                        Start Session
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between px-1 py-3">
+              <div className="flex gap-3">
+                {filters.map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setActiveFilter(f)}
+                    className={`px-[6px] py-1 font-medium text-sm transition-colors ${
+                      activeFilter === f
+                        ? "bg-blue-primary50 border border-blue-primary150 text-blue-primary250 shadow-sm"
+                        : "text-secondary-grey300 hover:text-gray-800"
+                    }`}
+                    style={{ borderRadius: "4px" }}
+                  >
+                    {f}{" "}
+                    <span
+                      className={`ml-1 ${
+                        activeFilter === f
+                          ? "border-blue-primary150"
+                          : "border-gray-200"
+                      } border  py-[.15rem] px-[.55rem] bg-white rounded-md text-xs`}
+                      style={{ borderRadius: "4px" }}
+                    >
+                      {getFilterCount(f)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-6">
+                {/* <div className='flex items-center space-x-2'>
+                <span className='text-gray-600 text-sm'>Tokens</span>
+                <Badge size='small' type='ghost' color='green' hover>{queueData.length}</Badge>
+              </div> */}
+                <img src={downloadIcon} alt="" className="w-4" />
+                <img src={vertical} alt="" className="h-6" />
+                <button
+                  onClick={() => setShowWalkIn(true)}
+                  className="inline-flex items-center gap-2 h-[32px] min-w-[32px] p-2 rounded-md border text-sm border-[#BFD6FF] bg-[#F3F8FF] text-[#2372EC] hover:bg-[#2372EC] hover:text-white transition-colors"
+                >
+                  <span>Walk-in Appointment</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="w-full flex flex-col gap-3 flex-1 min-h-0 overflow-hidden">
+              <div className="flex-1 min-w-0 min-h-0 overflow-hidden flex flex-col">
+                {queueData.length ? (
+                  <QueueTable
+                    hideCheckIn={true}
+                    prescreeningEnabled={false}
+                    allowSampleFallback={false}
+                    items={queueData}
+                    removingToken={null}
+                    incomingToken={null}
+                    checkedInToken={null}
+                    checkedInTokens={new Set()}
+                    onCheckIn={() => {}}
+                    onRevokeCheckIn={() => {}}
+                    onMarkNoShow={handleMarkNoShow}
+                  />
+                ) : (
+                  <div className="flex-1 flex items-center justify-center p-6">
+                    <div className="text-center">
+                      <div className="text-[15px] font-semibold text-gray-800 mb-1">
+                        No patients checked in yet
+                      </div>
+                      <div className="text-[12px] text-gray-500">
+                        Once Front Desk checks in patients they will appear here
+                        automatically.
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <PauseQueueModal
+          show={showPauseModal}
+          onClose={() => setShowPauseModal(false)}
+          pauseMinutes={pauseMinutes}
+          setPauseMinutes={setPauseMinutes}
+          pauseSubmitting={pauseSubmitting}
+          pauseError={pauseError}
+          onConfirm={handlePauseConfirm}
+        />
+      </div>
+      <BookAppointmentDrawer
+        open={showWalkIn}
+        onClose={() => setShowWalkIn(false)}
+                    lineHeight: "100%",
+                    verticalAlign: "middle",
+                  }}
+                >
+                  Select the duration to pause your queue. It will resume
+                  automatically afterward.
+                </p>
+
+                {/* Duration buttons */}
+                <div className="grid grid-cols-5 gap-2">
+                  {[5, 10, 15, 20, 30].map((min) => (
+                    <button
+                      key={min}
+                      onClick={() => setPauseMinutes(min)}
+                      className={`text-center ${
+                        pauseMinutes === min
+                          ? "bg-blue-primary50 text-blue-primary250"
+                          : "bg-secondary-grey50 text-secondary-grey400 hover:bg-blue-primary50 hover:text-blue-primary250"
+                      }`}
+                      style={{
+                        minWidth: "22px",
+                        height: "22px",
+                        paddingTop: "2px",
+                        paddingRight: "6px",
+                        paddingBottom: "2px",
+                        paddingLeft: "6px",
+                        borderRadius: "4px",
+                        border:
+                          pauseMinutes === min
+                            ? "0.5px solid #2372EC"
+                            : "0.5px solid #D1D5DB",
+                        fontFamily: "Inter",
+                        fontWeight: 400,
+                        fontSize: "14px",
+                        lineHeight: "120%",
+                        verticalAlign: "middle",
+                      }}
+                    >
+                      {min} min
+                    </button>
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {[45, 60].map((min) => (
+                    <button
+                      key={min}
+                      onClick={() => setPauseMinutes(min)}
+                      className={`text-center ${
+                        pauseMinutes === min
+                          ? "bg-blue-primary50 text-blue-primary250"
+                          : "bg-secondary-grey50 text-secondary-grey400 hover:bg-blue-primary50 hover:text-blue-primary250"
+                      }`}
+                      style={{
+                        minWidth: "22px",
+                        height: "22px",
+                        paddingTop: "2px",
+                        paddingRight: "6px",
+                        paddingBottom: "2px",
+                        paddingLeft: "6px",
+                        borderRadius: "4px",
+                        border:
+                          pauseMinutes === min
+                            ? "0.5px solid #2372EC"
+                            : "0.5px solid #D1D5DB",
+                        fontFamily: "Inter",
+                        fontWeight: 400,
+                        fontSize: "14px",
+                        lineHeight: "120%",
+                        verticalAlign: "middle",
+                      }}
+                    >
+                      {min} min
+                    </button>
+                  ))}
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex items-center gap-2">
+                  <button
+                    className="bg-monochrom-white text-secondary-grey400 hover:bg-secondary-grey50"
+                    style={{
+                      width: "178px",
+                      height: "32px",
+                      minWidth: "32px",
+                      borderRadius: "4px",
+                      padding: "8px",
+                      border: "0.5px solid #8E8E8E",
+                      fontFamily: "Inter",
+                      fontWeight: 500,
+                      fontSize: "14px",
+                      lineHeight: "120%",
+                      verticalAlign: "middle",
+                    }}
+                    onClick={() => setShowPauseModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    disabled={
+                      !pauseMinutes || pauseSubmitting || !selectedSlotId
+                    }
+                    className={
+                      pauseMinutes && !pauseSubmitting && selectedSlotId
+                        ? "bg-blue-primary250 hover:bg-blue-primary300"
+                        : "bg-secondary-grey50 cursor-not-allowed"
+                    }
+                    style={{
+                      width: "178px",
+                      height: "32px",
+                      minWidth: "32px",
+                      borderRadius: "4px",
+                      padding: "8px",
+                      fontFamily: "Inter",
+                      fontWeight: 500,
+                      fontSize: "14px",
+                      lineHeight: "120%",
+                      verticalAlign: "middle",
+                      color:
+                        pauseMinutes && !pauseSubmitting && selectedSlotId
+                          ? "#FFFFFF"
+                          : "#D6D6D6",
+                    }}
+                    onClick={() => {
+                      if (!pauseMinutes || !selectedSlotId) return;
+                      setPauseError("");
+                      setPauseSubmitting(true);
+                      (async () => {
+                        try {
+                          const resp = await pauseSlotEta(
+                            selectedSlotId,
+                            pauseMinutes
+                          );
+                          const serverEnds =
+                            resp?.data?.pauseEndsAt ||
+                            resp?.pauseEndsAt ||
+                            null;
+                          const wasRunning = !!runStartAt;
+                          if (wasRunning) {
+                            const delta = Math.floor(
+                              (Date.now() - runStartAt) / 1000
+                            );
+                            setBaseElapsed((b) => b + Math.max(0, delta));
+                            setRunStartAt(null);
+                          }
+                          wasRunningOnPauseRef.current = wasRunning;
+                          setQueuePaused(true);
+                          setShowPauseModal(false);
+                          const ends = serverEnds
+                            ? new Date(serverEnds).getTime()
+                            : Date.now() + pauseMinutes * 60 * 1000;
+                          setPauseEndsAt(ends);
+                          setPauseRemaining(
+                            Math.max(0, Math.floor((ends - Date.now()) / 1000))
+                          );
+                          if (autoResumeTimerRef.current)
+                            clearTimeout(autoResumeTimerRef.current);
+                          autoResumeTimerRef.current = setTimeout(() => {
+                            if (wasRunningOnPauseRef.current)
+                              setRunStartAt(Date.now());
+                            setQueuePaused(false);
+                            if (pauseTickerRef.current) {
+                              clearInterval(pauseTickerRef.current);
+                              pauseTickerRef.current = null;
+                            }
+                            setPauseEndsAt(null);
+                            setPauseRemaining(0);
+                            autoResumeTimerRef.current = null;
+                          }, pauseMinutes * 60 * 1000);
+                        } catch (e) {
+                          const msg =
+                            e?.response?.data?.message || e.message || "";
+                          // If backend requires ending current patient first, do it automatically then retry pause
+                          if (
+                            msg.includes(
+                              "Cannot pause session while a patient is currently being served"
+                            )
+                          ) {
+                            try {
+                              if (
+                                selectedSlotId &&
+                                activePatient?.token != null
+                              ) {
+                                await endPatientSessionEta(
+                                  selectedSlotId,
+                                  activePatient.token
+                                );
+                                await loadAppointmentsForSelectedSlot();
+                              }
+                              const resp2 = await pauseSlotEta(
+                                selectedSlotId,
+                                pauseMinutes
+                              );
+                              const serverEnds =
+                                resp2?.data?.pauseEndsAt ||
+                                resp2?.pauseEndsAt ||
+                                null;
+                              const wasRunning = !!runStartAt;
+                              if (wasRunning) {
+                                const delta = Math.floor(
+                                  (Date.now() - runStartAt) / 1000
+                                );
+                                setBaseElapsed((b) => b + Math.max(0, delta));
+                                setRunStartAt(null);
+                              }
+                              wasRunningOnPauseRef.current = wasRunning;
+                              setQueuePaused(true);
+                              setShowPauseModal(false);
+                              const ends = serverEnds
+                                ? new Date(serverEnds).getTime()
+                                : Date.now() + pauseMinutes * 60 * 1000;
+                              setPauseEndsAt(ends);
+                              setPauseRemaining(
+                                Math.max(
+                                  0,
+                                  Math.floor((ends - Date.now()) / 1000)
+                                )
+                              );
+                              if (autoResumeTimerRef.current)
+                                clearTimeout(autoResumeTimerRef.current);
+                              autoResumeTimerRef.current = setTimeout(() => {
+                                if (wasRunningOnPauseRef.current)
+                                  setRunStartAt(Date.now());
+                                setQueuePaused(false);
+                                if (pauseTickerRef.current) {
+                                  clearInterval(pauseTickerRef.current);
+                                  pauseTickerRef.current = null;
+                                }
+                                setPauseEndsAt(null);
+                                setPauseRemaining(0);
+                                autoResumeTimerRef.current = null;
+                              }, pauseMinutes * 60 * 1000);
+                            } catch (e2) {
+                              setPauseError(
+                                e2?.response?.data?.message ||
+                                  e2.message ||
+                                  "Failed to pause"
+                              );
+                            }
+                          } else {
+                            setPauseError(msg || "Failed to pause");
+                          }
+                        } finally {
+                          setPauseSubmitting(false);
+                        }
+                      })();
+                    }}
+                  >
+                    {pauseSubmitting ? "Pausing…" : "Confirm"}
+                  </button>
+                </div>
+
+                {/* Warning section */}
+                <div
+                  className="bg-secondary-grey50 flex items-center gap-1"
+                  style={{
+                    width: "400px",
+                    height: "32px",
+                    marginLeft: "-16px",
+                    marginRight: "-16px",
+                    marginBottom: "-16px",
+                    padding: "8px",
+                    borderTop: "0.5px solid #D6D6D6",
+                    borderBottomLeftRadius: "12px",
+                    borderBottomRightRadius: "12px",
+                  }}
+                >
+                  <img src={infoCircle} alt="Info" className="w-4 h-4" />
+                  <span
+                    className="text-secondary-grey300"
+                    style={{
+                      fontFamily: "Inter",
+                      fontWeight: 400,
+                      fontSize: "11px",
+                      lineHeight: "100%",
+                      verticalAlign: "middle",
+                    }}
+                  >
+                    Queue will automatically resume after selected time.
+                  </span>
+                </div>
+
+                {pauseError && (
+                  <div className="mt-2 text-[12px] text-red-600 text-center">
+                    {pauseError}
+                  </div>
+                )}
+              </div>
+            </div>,
+            document.body
+          )}
+      </div>
+      <BookAppointmentDrawer
+        open={showWalkIn}
+        onClose={() => setShowWalkIn(false)}
+        doctorId={doctorId}
+        clinicId={clinicId}
+        hospitalId={hospitalId}
+        onBookedRefresh={() => {
+          if (selectedSlotId) {
+            try {
+              loadAppointmentsForSelectedSlot();
+            } catch {}
+          }
+        }}
+      />
+    </>
+  );
+};
+
+export default Queue;

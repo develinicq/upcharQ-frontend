@@ -1,0 +1,18 @@
+import * as React from "react";
+const SvgTagHorizontal = (props) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="1em"
+    height="1em"
+    fill="none"
+    viewBox="0 0 24 24"
+    {...props}
+  >
+    <path
+      stroke="currentColor"
+      strokeLinecap="round"
+      d="M7.5 7.995V17m5.858 4h-2.637c-3.875 0-5.813 0-7.017-1.245S2.5 16.507 2.5 12.5s0-6.01 1.204-7.255S6.846 4 10.72 4h2.637c2.227 0 3.341 0 4.27.533.93.533 1.52 1.509 2.701 3.462l.681 1.126c.993 1.643 1.49 2.465 1.49 3.379s-.497 1.736-1.49 3.379l-.68 1.126c-1.181 1.953-1.771 2.93-2.701 3.462-.93.533-2.044.533-4.271.533Z"
+    />
+  </svg>
+);
+export default SvgTagHorizontal;

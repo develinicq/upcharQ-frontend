@@ -1,0 +1,264 @@
+[
+    {
+        "docId": "DOC001",
+        "userId": "user-001",
+        "name": "Dr. Rahul Sharma",
+        "gender": "M",
+        "contactNumber": "+91 9876543210",
+        "email": "rajesh.kumar@example.com",
+        "location": "Akola, MH",
+        "specializations": [
+            "General Physician"
+        ],
+        "designation": "MBBS, MD",
+        "yearOfExperience": 3,
+        "status": "Active",
+        "rating": 4.0,
+        "startDate": "02/02/2024",
+        "plan": "Basic",
+        "planStatus": "Active"
+    },
+    {
+        "docId": "DOC002",
+        "userId": "user-002",
+        "name": "Dr. Arjun Singh",
+        "gender": "F",
+        "contactNumber": "+91 7654321098",
+        "email": "suresh.patel@mail.com",
+        "location": "Jaipur, RJ",
+        "specializations": [
+            "Cardiology"
+        ],
+        "designation": "MBBS, DM",
+        "yearOfExperience": 9,
+        "status": "Active",
+        "rating": 4.0,
+        "startDate": "02/02/2024",
+        "plan": "Basic",
+        "planStatus": "Active"
+    },
+     {
+        "docId": "DOC002",
+        "userId": "user-002",
+        "name": "Dr. Arjun Singh",
+        "gender": "F",
+        "contactNumber": "+91 7654321098",
+        "email": "suresh.patel@mail.com",
+        "location": "Jaipur, RJ",
+        "specializations": [
+            "Cardiology"
+        ],
+        "designation": "MBBS, DM",
+        "yearOfExperience": 9,
+        "status": "Active",
+        "rating": 4.0,
+        "startDate": "02/02/2024",
+        "plan": "Basic",
+        "planStatus": "Active"
+    }, {
+        "docId": "DOC002",
+        "userId": "user-002",
+        "name": "Dr. Arjun Singh",
+        "gender": "F",
+        "contactNumber": "+91 7654321098",
+        "email": "suresh.patel@mail.com",
+        "location": "Jaipur, RJ",
+        "specializations": [
+            "Cardiology"
+        ],
+        "designation": "MBBS, DM",
+        "yearOfExperience": 9,
+        "status": "Active",
+        "rating": 4.0,
+        "startDate": "02/02/2024",
+        "plan": "Basic",
+        "planStatus": "Active"
+    }, {
+        "docId": "DOC002",
+        "userId": "user-002",
+        "name": "Dr. Arjun Singh",
+        "gender": "F",
+        "contactNumber": "+91 7654321098",
+        "email": "suresh.patel@mail.com",
+        "location": "Jaipur, RJ",
+        "specializations": [
+            "Cardiology"
+        ],
+        "designation": "MBBS, DM",
+        "yearOfExperience": 9,
+        "status": "Active",
+        "rating": 4.0,
+        "startDate": "02/02/2024",
+        "plan": "Basic",
+        "planStatus": "Active"
+    }, {
+        "docId": "DOC002",
+        "userId": "user-002",
+        "name": "Dr. Arjun Singh",
+        "gender": "F",
+        "contactNumber": "+91 7654321098",
+        "email": "suresh.patel@mail.com",
+        "location": "Jaipur, RJ",
+        "specializations": [
+            "Cardiology"
+        ],
+        "designation": "MBBS, DM",
+        "yearOfExperience": 9,
+        "status": "Active",
+        "rating": 4.0,
+        "startDate": "02/02/2024",
+        "plan": "Basic",
+        "planStatus": "Active"
+    },
+    {
+        "docId": "DOC003",
+        "userId": "user-003",
+        "name": "Dr. Kavya Nair",
+        "gender": "M",
+        "contactNumber": "+91 5432109876",
+        "email": "vikram.agarwal@service.com",
+        "location": "Chennai, TN",
+        "specializations": [
+            "Dermatology"
+        ],
+        "designation": "MBBS, MD",
+        "yearOfExperience": 8,
+        "status": "Active",
+        "rating": 4.0,
+        "startDate": "02/02/2024",
+        "plan": "Basic",
+        "planStatus": "Active"
+    },
+    {
+        "docId": "DOC004",
+        "userId": "user-004",
+        "name": "Dr. Karan Sharma",
+        "gender": "F",
+        "contactNumber": "+91 8765432110",
+        "email": "pooja.patel@gmail.com",
+        "location": "Ahmedabad, GJ",
+        "specializations": [
+            "Orthopedics"
+        ],
+        "designation": "MBBS, MS",
+        "yearOfExperience": 5,
+        "status": "Inactive",
+        "rating": 4.0,
+        "startDate": "02/02/2024",
+        "plan": "Basic",
+        "planStatus": "Suspended"
+    },
+    {
+        "docId": "DOC005",
+        "userId": "user-005",
+        "name": "Dr. Deepak Prasad",
+        "gender": "F",
+        "contactNumber": "+91 1234567890",
+        "email": "sita.verma@xyz.com",
+        "location": "Mumbai, MH",
+        "specializations": [
+            "ENT"
+        ],
+        "designation": "MBBS, MS",
+        "yearOfExperience": 6,
+        "status": "Inactive",
+        "rating": 4.0,
+        "startDate": "02/02/2024",
+        "plan": "Basic",
+        "planStatus": "Suspended"
+    }, {
+        "docId": "DOC002",
+        "userId": "user-002",
+        "name": "Dr. Arjun Singh",
+        "gender": "F",
+        "contactNumber": "+91 7654321098",
+        "email": "suresh.patel@mail.com",
+        "location": "Jaipur, RJ",
+        "specializations": [
+            "Cardiology"
+        ],
+        "designation": "MBBS, DM",
+        "yearOfExperience": 9,
+        "status": "Active",
+        "rating": 4.0,
+        "startDate": "02/02/2024",
+        "plan": "Basic",
+        "planStatus": "Active"
+    }, {
+        "docId": "DOC002",
+        "userId": "user-002",
+        "name": "Dr. Arjun Singh",
+        "gender": "F",
+        "contactNumber": "+91 7654321098",
+        "email": "suresh.patel@mail.com",
+        "location": "Jaipur, RJ",
+        "specializations": [
+            "Cardiology"
+        ],
+        "designation": "MBBS, DM",
+        "yearOfExperience": 9,
+        "status": "Active",
+        "rating": 4.0,
+        "startDate": "02/02/2024",
+        "plan": "Basic",
+        "planStatus": "Active"
+    },
+    {
+        "docId": "DOC003",
+        "userId": "user-003",
+        "name": "Dr. Kavya Nair",
+        "gender": "M",
+        "contactNumber": "+91 5432109876",
+        "email": "vikram.agarwal@service.com",
+        "location": "Chennai, TN",
+        "specializations": [
+            "Dermatology"
+        ],
+        "designation": "MBBS, MD",
+        "yearOfExperience": 8,
+        "status": "Active",
+        "rating": 4.0,
+        "startDate": "02/02/2024",
+        "plan": "Basic",
+        "planStatus": "Active"
+    },
+    {
+        "docId": "DOC004",
+        "userId": "user-004",
+        "name": "Dr. Karan Sharma",
+        "gender": "F",
+        "contactNumber": "+91 8765432110",
+        "email": "pooja.patel@gmail.com",
+        "location": "Ahmedabad, GJ",
+        "specializations": [
+            "Orthopedics"
+        ],
+        "designation": "MBBS, MS",
+        "yearOfExperience": 5,
+        "status": "Inactive",
+        "rating": 4.0,
+        "startDate": "02/02/2024",
+        "plan": "Basic",
+        "planStatus": "Suspended"
+    },
+    {
+        "docId": "DOC005",
+        "userId": "user-005",
+        "name": "Dr. Deepak Prasad",
+        "gender": "F",
+        "contactNumber": "+91 1234567890",
+        "email": "sita.verma@xyz.com",
+        "location": "Mumbai, MH",
+        "specializations": [
+            "ENT"
+        ],
+        "designation": "MBBS, MS",
+        "yearOfExperience": 6,
+        "status": "Inactive",
+        "rating": 4.0,
+        "startDate": "02/02/2024",
+        "plan": "Basic",
+        "planStatus": "Suspended"
+    }
+    
+]
