@@ -5,6 +5,7 @@ import Doctor from "./SuperAdmin/pages/Doctors/Doctor";
 import Hospitals from "./SuperAdmin/pages/Hospitals/Hospitals";
 import Patients from "./SuperAdmin/pages/Patients/Patients";
 import Settings from "./SuperAdmin/pages/Settings/Settings";
+import HelpSupport from "./SuperAdmin/pages/HelpSupport/HelpSupport";
 import Layout_registration_new from "./components/Layouts/Layout_registration_new";
 import Layout_registration_test from "./components/Layouts/Layout_registration_test";
 import DoctorDetailsPage from "./SuperAdmin/pages/Doctors/DoctorList/DoctorInfo/DoctorDetailsPage";
@@ -93,6 +94,7 @@ function App() {
           <Route path="hospital/:id" element={<HospitalDetailsPage />} />
           <Route path="patients" element={<Patients />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="help-support" element={<HelpSupport />} />
         </Route>
       </Route>
 
