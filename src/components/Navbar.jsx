@@ -1,5 +1,5 @@
 
-import { User, LogOut, ChevronRight } from 'lucide-react'
+import { User, LogOut, ChevronRight, Search } from 'lucide-react'
 
 import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
@@ -8,6 +8,7 @@ import NotificationDrawer from './NotificationDrawer.jsx'
 import AddPatientDrawer from './PatientList/AddPatientDrawer.jsx'
 import BookAppointmentDrawer from './Appointment/BookAppointmentDrawer.jsx'
 import InviteStaffDrawer from '../DoctorModule/Pages/Settings/Drawers/InviteStaffDrawer.jsx'
+import GlobalSearch from './GlobalSearch.jsx'
 import AvatarCircle from './AvatarCircle.jsx'
 import useAuthStore from '../store/useAuthStore'
 import useSuperAdminAuthStore from '../store/useSuperAdminAuthStore';
@@ -122,6 +123,7 @@ const Navbar = () => {
   const [addPatientOpen, setAddPatientOpen] = useState(false);
   const [bookApptOpen, setBookApptOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const dropdownRef = useRef(null);
   const profileRef = useRef(null);
   const navigate = useNavigate();
@@ -285,6 +287,16 @@ const Navbar = () => {
         <div className='flex gap-2 items-center'>
           {!isRegistrationFlow && (
             <>
+              {/* Search Box Trigger */}
+              <button
+                onClick={() => setIsSearchOpen(true)}
+                className='hidden lg:flex items-center w-[330px] h-[34px] bg-white border border-gray-400 rounded-md px-2 gap-2 mr-2 cursor-text hover:border-blue-400 transition-colors'
+              >
+                <Search className='w-4 h-4 text-gray-500' strokeWidth={2} />
+                <span className='flex-1 text-sm text-left text-gray-400'>Search Patients</span>
+                <span className='text-[14px] text-gray-400 font-normal'>Ctrl+K</span>
+              </button>
+
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={toggleDropdown}
@@ -362,6 +374,7 @@ const Navbar = () => {
         onSave={() => setBookApptOpen(false)}
       />
       <InviteStaffDrawer open={inviteOpen} onClose={() => setInviteOpen(false)} />
+      <GlobalSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </>
   )
 }

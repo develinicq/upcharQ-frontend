@@ -17,12 +17,14 @@ import {
 } from "../../../../public/index.js";
 import HelpSupportDrawer from "../../components/HelpSupport/HelpSupportDrawer";
 import RaiseQueryDrawer from "../../components/HelpSupport/RaiseQueryDrawer";
+import FAQDrawer from "../../components/HelpSupport/FAQDrawer";
 
 const Sidebar = () => {
   const location = useLocation();
   const [showHelp, setShowHelp] = useState(false);
   const [showHelpDrawer, setShowHelpDrawer] = useState(false);
   const [showQueryDrawer, setShowQueryDrawer] = useState(false);
+  const [showFAQDrawer, setShowFAQDrawer] = useState(false);
   const helpRef = useRef(null);
 
   // Close popup when clicking outside
@@ -175,6 +177,10 @@ const Sidebar = () => {
             </button>
 
             <button
+              onClick={() => {
+                setShowHelp(false);
+                setShowFAQDrawer(true);
+              }}
               className="w-full flex items-center gap-2 px-3 py-2 text-[14px] text-gray-700 hover:bg-gray-50 rounded-md text-left group transition-colors"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500 group-hover:text-blue-600">
@@ -210,6 +216,10 @@ const Sidebar = () => {
       <RaiseQueryDrawer
         isOpen={showQueryDrawer}
         onClose={() => setShowQueryDrawer(false)}
+      />
+      <FAQDrawer
+        isOpen={showFAQDrawer}
+        onClose={() => setShowFAQDrawer(false)}
       />
     </div>
   );

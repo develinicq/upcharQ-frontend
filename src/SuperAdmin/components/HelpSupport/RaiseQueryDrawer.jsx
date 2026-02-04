@@ -15,7 +15,7 @@ const RaiseQueryDrawer = ({ isOpen, onClose }) => {
             headerRight={
                 <button
                     onClick={onClose}
-                    className="px-3 py-1.5 text-xs font-normal text-gray-400 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
+                    className="px-3 py-1.5 text-xs font-normal text-gray-200 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
                 >
                     Submit
                 </button>
@@ -33,7 +33,7 @@ const RaiseQueryDrawer = ({ isOpen, onClose }) => {
                             onChange={() => setQueryType('query')}
                             className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                         />
-                        <span className="text-xs text-gray-700">Raise Query</span>
+                        <span className="text-xs text-gray-700 font-normal">Raise Query</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                         <input
@@ -43,40 +43,54 @@ const RaiseQueryDrawer = ({ isOpen, onClose }) => {
                             onChange={() => setQueryType('suggestion')}
                             className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                         />
-                        <span className="text-xs text-gray-700">Suggestion</span>
+                        <span className="text-xs text-gray-700 font-normal">Suggestion</span>
                     </label>
                 </div>
 
                 {/* Form Fields */}
                 <div className="flex flex-col gap-4">
-                    {/* Type of Query */}
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-normal text-gray-600">
-                            Type of Query <span className="text-red-500">*</span>
-                        </label>
-                        <select className="w-full h-8 px-1 text-xs border border-gray-400 rounded-md outline-none focus:border-blue-500 text-gray-200 bg-white">
-                            <option value="">Select Query</option>
-                            <option value="technical">Technical Issue</option>
-                            <option value="billing">Billing</option>
-                            <option value="feature">Feature Request</option>
-                            <option value="other">Other</option>
-                        </select>
-                    </div>
+                    {queryType === 'query' ? (
+                        /* Type of Query */
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-xs font-light text-gray-700">
+                                Type of Query <span className="text-red-500">*</span>
+                            </label>
+                            <select className="w-full h-8 px-1 text-xs border border-gray-400 rounded-md outline-none focus:border-blue-500 text-gray-300 bg-white">
+                                <option value="">Select Query</option>
+                                <option value="technical">Technical Issue</option>
+                                <option value="billing">Billing</option>
+                                <option value="feature">Feature Request</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    ) : (
+                        /* Enter Suggestions */
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-xs font-normal text-gray-700">
+                                Enter Suggestions <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="Enter Suggestion"
+                                className="w-full h-8 px-2 text-xs border border-gray-400 rounded-md outline-none focus:border-blue-500 text-gray-700 placeholder:text-gray-300 bg-white"
+                            />
+                        </div>
+                    )}
 
                     {/* Description */}
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-medium text-gray-600">
+                        <label className="text-xs font-light text-gray-700">
                             Description <span className="text-red-500">*</span>
                         </label>
                         <textarea
-                            placeholder="Describe Your Query"
+                            placeholder={queryType === 'query' ? "Describe Your Query" : "Describe Your Suggestion"}
                             className="w-full h-24 p-2 text-xs border border-gray-400 rounded-md outline-none focus:border-blue-500 text-gray-700 placeholder:text-gray-300 resize-none"
                         />
                     </div>
 
                     {/* Attachment */}
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-medium text-gray-600">
+                        <label className="text-xs font-light  text-gray-700">
                             Add Attachment
                         </label>
                         <div className="border border-dashed border-blue-400 rounded-lg p-4 flex flex-col items-center justify-center gap-3 bg-blue-50/30 cursor-pointer hover:bg-blue-50/50 transition-colors">
