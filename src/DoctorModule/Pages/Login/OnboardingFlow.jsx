@@ -5,20 +5,40 @@ import ActivationSuccess from './ActivationSuccess';
 
 // Simple local-state flow controller that keeps URL stable at /onboarding
 export default function OnboardingFlow() {
-  // steps: 'create-password' -> 'verify' -> 'activated'
-  const [step, setStep] = useState('create-password');
+  // steps: 'verify' -> 'create-password' -> 'activated'
+  const [step, setStep] = useState('verify');
   const [flowData, setFlowData] = useState({
-    details: null,
-    password: '',
-    confirmPassword: '',
+    details: {
+      user: {
+        firstName: 'Milind',
+        lastName: 'Chauhan',
+        degree: 'MBBS, MD - General Medicine',
+        emailId: 'Milindchauhan@gmail.com',
+        phone: '+91 91753 67487',
+        id: 'DO00123',
+        profilePhoto: 'https://randomuser.me/api/portraits/men/32.jpg'
+      },
+      invitation: {
+        type: 'DOCTOR',
+        id: 'mock-invitation-id',
+        userId: 'mock-user-id',
+        hospitalId: 'mock-hospital-id'
+      },
+      challengeID: {
+        mobile: 'mock-mobile-id',
+        email: 'mock-email-id'
+      }
+    },
+    password: 'password123',
+    confirmPassword: 'password123',
   });
 
-  const handleContinueFromOnboarding = useCallback((payload) => {
-    if (payload) setFlowData(payload);
-    setStep('verify');
+  const handleVerified = useCallback(() => {
+    setStep('create-password');
   }, []);
 
-  const handleVerified = useCallback(() => {
+  const handleContinueFromOnboarding = useCallback((payload) => {
+    if (payload) setFlowData(prev => ({ ...prev, ...payload }));
     setStep('activated');
   }, []);
 
@@ -30,7 +50,7 @@ export default function OnboardingFlow() {
   if (step === 'verify') {
     const inv = flowData?.details?.invitation;
     const ch = flowData?.details?.challengeID;
-    return ( 
+    return (
       <Verification
         onVerified={handleVerified}
         invitationId={inv?.id}
@@ -38,8 +58,9 @@ export default function OnboardingFlow() {
         emailChallengeId={ch?.email}
         password={flowData?.password}
         confirmPassword={flowData?.confirmPassword}
-      userId={inv?.userId}
-      hospitalId={inv?.hospitalId}
+        userId={inv?.userId}
+        hospitalId={inv?.hospitalId}
+        userDetails={flowData?.details?.user}
       />
     );
   }

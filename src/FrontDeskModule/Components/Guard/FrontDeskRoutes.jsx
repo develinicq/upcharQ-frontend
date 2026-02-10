@@ -13,10 +13,18 @@ export const ProtectedFrontDeskRoute = () => {
 
     if (!token) {
         if (isLoggingOut) {
-            return <Navigate to="/doc/signin" replace />;
+            return <Navigate to="/fd/signin" replace />;
         }
-        return <Navigate to="/doc/signin" replace state={{ fromGuard: true, message: "Please sign in to access Front Desk." }} />;
+        return <Navigate to="/fd/signin" replace state={{ fromGuard: true, message: "Please sign in to access Front Desk." }} />;
     }
 
+    return <Outlet />;
+};
+
+export const PublicFrontDeskRoute = () => {
+    const { token } = useFrontDeskAuthStore();
+    if (token) {
+        return <Navigate to="/fd/queue" replace />;
+    }
     return <Outlet />;
 };

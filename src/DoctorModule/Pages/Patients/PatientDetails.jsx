@@ -73,7 +73,14 @@ export default function PatientDetails() {
           gender: overview.gender ? (overview.gender.charAt(0).toUpperCase() + overview.gender.slice(1).toLowerCase()) : (prev.gender || "-"),
           dob: overview.dob ? new Date(overview.dob).toLocaleDateString("en-GB") : (prev.dob || "-"),
           age: overview.age !== undefined ? `${overview.age}y` : (prev.age || "-"),
-          blood: overview.bloodGroup ? overview.bloodGroup.replace('_', ' ') : (prev.blood || "-"),
+          blood: overview.bloodGroup
+            ? overview.bloodGroup
+              .replace(/_/g, " ")
+              .replace(/positive/i, "+")
+              .replace(/negative/i, "-")
+              .replace(/\s/g, "")
+              .toUpperCase()
+            : (prev.blood || "-"),
           lastVisit: lastVisit.date && (lastVisit.time || lastVisit.time === null)
             ? `${new Date(lastVisit.date).toLocaleDateString("en-GB")} | ${lastVisit.time ? new Date(lastVisit.time).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : ""}` : "-",
           lastVisitDoctor: lastVisit.doctor?.name || lastVisit.doctorName || "-",
@@ -118,7 +125,15 @@ export default function PatientDetails() {
   const mrn = patient.patientId || "-";
   const gender = patient.gender || "-";
   const dob = patient.dob || "-";
-  const blood = patient.blood || "-";
+  const bloodRaw = patient.blood || patient.bloodGroup || "-";
+  const blood = bloodRaw !== "-"
+    ? bloodRaw
+      .replace(/_/g, " ")
+      .replace(/positive/i, "+")
+      .replace(/negative/i, "-")
+      .replace(/\s/g, "")
+      .toUpperCase()
+    : "-";
 
   // leftTab controls the left fixed panel (overview, demographics)
   // rightTab controls the right flexible panel (vitals, appointment, medical, documents)
@@ -148,12 +163,12 @@ export default function PatientDetails() {
   const activeProblems = patient.activeProblems || [];
   const dependants = patient.dependants || [];
 
-  if (loading && !patient.raw) return <UniversalLoader size={32} />;
+  if (loading && !patient.name) return <UniversalLoader size={32} />;
   return (
     <>
       {/* Header row */}
-      <div className="bg-white px-4 py-3 border border-gray-200  flex items-center justify-between">
-        <div className="flex items-center gap-[10px]">
+      <div className="bg-white px-2 py-0.5 border border-gray-100  flex items-center justify-between">
+        <div className="flex items-center gap-[5px]">
           <button
             onClick={() => navigate(-1)}
             className="
@@ -168,29 +183,29 @@ export default function PatientDetails() {
             <img
               src="/arrow-left.svg"
               alt="left arrow button"
-              className="w-[16px] h-[16px] object-contain"
+              className="w-[10px] h-[10px] object-contain"
             />
           </button>
 
-          <AvatarCircle name={name} size="l" />
+          <AvatarCircle name={name} size="s" />
           <div className="flex flex-col">
-            <div>
-              <span className="font-semibold text-gray-800 text-lg">
+            <div className="leading-none">
+              <span className="font-semibold text-gray-700 text-base ml-1">
                 {name}
               </span>
             </div>
-            <div className="flex items-center text-xs text-gray-500 mt-1">
+            <div className="flex items-center text-[11px] text-gray-500 ml-1 -mt-1.5">
               <span className="flex items-center gap-1">
                 {dob} {patient.age ? `(${patient.age})` : ""}
               </span>
               {/* Vertical line */}
-              <div className="h-6 w-[1.2px] bg-gray-300 mx-2"></div>
+              <div className="h-4 w-[0.5px] bg-gray-300 mx-2"></div>
 
               <span className="flex items-center gap-1">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
+                  width="12"
+                  height="12"
                   viewBox="0 0 16 16"
                   fill="none"
                 >
@@ -207,13 +222,13 @@ export default function PatientDetails() {
               </span>
 
               {/* Vertical line */}
-              <div className="h-6 w-[1.2px] bg-gray-300 mx-2"></div>
+              <div className="h-4 w-[0.5px] bg-gray-300 mx-2"></div>
 
               <span className="flex items-center gap-1">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
+                  width="12"
+                  height="12"
                   viewBox="0 0 16 16"
                   fill="none"
                 >
@@ -231,16 +246,16 @@ export default function PatientDetails() {
               </span>
 
               {/* Vertical line */}
-              <div className="h-6 w-[1.2px] bg-gray-300 mx-2"></div>
+              <div className="h-4 w-[0.5px] bg-gray-300 mx-2"></div>
 
-              <span className="text-xs text-gray-500 bg-gray-50 p-1">
+              <span className="text-[11px] text-gray-500 bg-gray-50 p-1">
                 MRN: {mrn}
               </span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1 ">
           <button
             onClick={handleOpenSchedule}
             className="group flex flex-col items-center"
@@ -248,8 +263,8 @@ export default function PatientDetails() {
             <svg
               className="transition-transform duration-200 group-hover:scale-110 group-hover:bg-gray-100"
               xmlns="http://www.w3.org/2000/svg"
-              width="28"
-              height="28"
+              width="25r"
+              height="25"
               viewBox="0 0 28 28"
               fill="none"
             >
@@ -263,11 +278,11 @@ export default function PatientDetails() {
               />
             </svg>
 
-            <span className="text-xs text-gray-500">Schedule</span>
+            <span className="text-[8px] text-gray-500">Schedule</span>
           </button>
 
           {/* Vertical line */}
-          <div className="h-7 w-[1.2px] bg-gray-300 mx-2"></div>
+          <div className="h-4 w-[1.2px] bg-gray-300 mx-2"></div>
 
           <button
             onClick={handleOpenAddVitals}
@@ -276,8 +291,8 @@ export default function PatientDetails() {
             <svg
               className="transition-transform duration-200 group-hover:scale-110 group-hover:bg-gray-100"
               xmlns="http://www.w3.org/2000/svg"
-              width="28"
-              height="28"
+              width="25"
+              height="25"
               viewBox="0 0 28 28"
               fill="none"
             >
@@ -291,16 +306,16 @@ export default function PatientDetails() {
                 strokeLinecap="round"
               />
             </svg>
-            <span className="text-xs text-gray-500">Add Vitals</span>
+            <span className="text-[8px] text-gray-500">Add Vitals</span>
           </button>
 
           {/* Vertical line */}
-          <div className="h-7 w-[1.2px] bg-gray-300 mx-2"></div>
+          <div className="h-4 w-[0.5px] bg-gray-300 mx-2"></div>
 
           <button className="p-1 rounded hover:bg-gray-100">
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              width="28"
+              width="25"
               height="28"
               viewBox="0 0 28 28"
               fill="none"
@@ -338,17 +353,17 @@ export default function PatientDetails() {
       </div>
 
       {/* Main split panels: left fixed 400px, right flexible — each has its own navigation */}
-      <div className="bg-white border border-gray-200">
+      <div className="bg-white border border-gray-100">
         <div className="">
           <div className="flex">
             {/* Left fixed column with its own nav */}
-            <div className="w-[350px] flex-shrink-0 border-r border-gray-200">
-              <div className="w-[100%] h-10 px-2 bg-white opacity-100 border-b-[1.5px] border-[#D6D6D6] flex gap-[4px]">
+            <div className="w-[330px] flex-shrink-0 border-r border-gray-200">
+              <div className="w-[100%] h-8 px-3 bg-white opacity-100 flex gap-[4px]">
                 <button
                   onClick={() => setLeftTab("overview")}
                   className={`${leftTab === "overview"
-                    ? "h-10 py-1 gap-1 opacity-100 border-b-[2px] border-[#2372EC]"
-                    : "h-10 py-1 gap-1 opacity-100 border-b-[1px] text-gray-600 hover:text-gray-800"
+                    ? "h-9 py-1 gap-1 opacity-100 text-[13px] font-normal text-gray-600 hover:text-blue-500"
+                    : "h-9 py-1 gap-1 opacity-100 text-[13px] font-normal text-gray-600 hover:text-blue-500"
                     }`}
                 >
                   Overview
@@ -356,8 +371,8 @@ export default function PatientDetails() {
                 <button
                   onClick={() => setLeftTab("demographics")}
                   className={`${leftTab === "demographics"
-                    ? "h-10 px-[6px] py-1 gap-1 opacity-100 border-b-[2px] border-[#2372EC]"
-                    : "h-10 px-[6px] py-1 gap-1 opacity-100 border-b-[1px] text-gray-600 hover:text-gray-800"
+                    ? "h-9 px-[6px] py-1 gap-1 opacity-100 text-[13px] font-normal text-gray-600 hover:text-blue-500"
+                    : "h-9 px-[6px] py-1 gap-1 opacity-100 text-[13px] font-normal text-gray-600 hover:text-blue-500"
                     }`}
                 >
                   Demographics
@@ -370,7 +385,7 @@ export default function PatientDetails() {
                   value={stickyNote}
                   onChange={(e) => setStickyNote(e.target.value)}
                   placeholder="Add Sticky Notes of Patient's Quick Updates"
-                  className="text-[14px] w-[100%] h-9 p-[10px] gap-2.5 opacity-100 border-t-[0.5px] border-b-[0.5px] border-[#BE8B0080] focus:outline-none focus:border-[#be8b00c9] bg-[#FEF9E6]"
+                  className="text-[11px] w-[100%] h-7 p-[9px] gap-2 opacity-100 border-t-[0.5px] border-b-[0.5px] border-[#BE8B0080] focus:outline-none focus:border-[#be8b00c9] bg-[#FEF9E6]"
                 />
               </div>
 
@@ -769,30 +784,30 @@ export default function PatientDetails() {
 
             {/* Right flexible column with its own nav */}
             <div className="flex-1">
-              <div className="h-10 gap-2 px-2 opacity-100 border-b-[0.5px] border-[#D6D6D6]">
+              <div className="h-8 gap-2 px-2 opacity-100 border-b-[0.5px] border-[#D6D6D6]">
                 <button
                   onClick={() => setRightTab("vitals")}
-                  className={`h-10 px-2 ${rightTab === "vitals"
-                    ? "text-blue-600 border-b-2 border-blue-600"
-                    : "text-gray-600 hover:text-gray-800"
+                  className={`h-9 px-2  ${rightTab === "vitals"
+                    ? "text-blue-600 border-b-1 border-blue-600 text-[13px] font-normal "
+                    : "text-gray-600 hover:text-gray-800 text-[13px] font-normal "
                     }`}
                 >
                   Vitals & Biometrics
                 </button>
                 <button
                   onClick={() => setRightTab("appointment")}
-                  className={`h-10 px-2 ${rightTab === "appointment"
-                    ? "text-blue-600 border-b-2 border-blue-600"
-                    : "text-gray-600 hover:text-gray-800"
+                  className={`h-9 px-2 ${rightTab === "appointment"
+                    ? "text-blue-600 border-b-1 border-blue-600 text-[13px] font-normal"
+                    : "text-gray-600 hover:text-gray-800 text-[13px] font-normal"
                     }`}
                 >
                   Appointment
                 </button>
                 <button
                   onClick={() => setRightTab("medical")}
-                  className={`h-10 px-2 ${rightTab === "medical"
-                    ? "text-blue-600 border-b-2 border-blue-600"
-                    : "text-gray-600 hover:text-gray-800"
+                  className={`h-9 px-2 ${rightTab === "medical"
+                    ? "text-blue-600 border-b-1 border-blue-600 text-[13px] font-normal"
+                    : "text-gray-600 hover:text-gray-800 text-[13px] font-normal"
                     }`}
                 >
                   Medical History

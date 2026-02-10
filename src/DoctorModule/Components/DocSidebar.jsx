@@ -5,42 +5,51 @@ import {
   ArrowRight,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   Building2,
-  Circle,
-  CircleDot,
   Plus,
+  BookOpen,
+  LifeBuoy,
+  MessageSquarePlus,
+  ExternalLink
 } from "lucide-react";
 // Use icons from public/index.js (MainSidebar + Doctor module sidebar icons)
 import {
   logo,
-  // existing main sidebar icons (may still be used elsewhere)
   dashboardSelected,
   dashboardUnselect,
-  doctorSelect,
-  doctorUnselect,
-  hospitalSelected,
-  hospitalUnselect,
-  patientUnselect,
-  settingUnselect,
-  // Doctor module sidebar icons (white/blue variants)
-  calendarWhite,
-  dashboardWhite,
   patientBlue,
   patientWhite,
   queueBlue,
   queueWhite,
   settingBlue,
+  settingUnselect,
+  calendarWhite,
+  dashboardWhite,
   helpWhite,
 } from "../../../public/index.js";
 import AvatarCircle from "../../components/AvatarCircle";
 import useDoctorAuthStore from "../../store/useDoctorAuthStore";
 import useHospitalAuthStore from "../../store/useHospitalAuthStore";
 import useClinicStore from "../../store/settings/useClinicStore";
+import HelpSupportDrawer from "../../SuperAdmin/components/HelpSupport/HelpSupportDrawer";
+import RaiseQueryDrawer from "../../SuperAdmin/components/HelpSupport/RaiseQueryDrawer";
+import FAQDrawer from "../../SuperAdmin/components/HelpSupport/FAQDrawer";
 
 const DocSidebar = () => {
   const location = useLocation();
   const isSettingsRoute = location.pathname.startsWith("/doc/settings");
   const [openSettings, setOpenSettings] = useState(isSettingsRoute);
+
+  // Drawer states
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [queryOpen, setQueryOpen] = useState(false);
+  const [faqOpen, setFaqOpen] = useState(false);
+
+  // Help Menu Popover state
+  const [showHelpMenu, setShowHelpMenu] = useState(false);
+  const helpTriggerRef = useRef(null);
+  const helpPopoverRef = useRef(null);
 
   // Get doctor data
   const { user: doctorData } = useDoctorAuthStore();
@@ -57,6 +66,23 @@ const DocSidebar = () => {
   const triggerRef = useRef(null);
   const popoverRef = useRef(null);
   const [popoverPos, setPopoverPos] = useState({ top: 0, left: 0 });
+
+  // Close help menu on outside click
+  useEffect(() => {
+    const onClick = (e) => {
+      if (
+        showHelpMenu &&
+        helpTriggerRef.current &&
+        !helpTriggerRef.current.contains(e.target) &&
+        helpPopoverRef.current &&
+        !helpPopoverRef.current.contains(e.target)
+      ) {
+        setShowHelpMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [showHelpMenu]);
 
   // Build accounts from API data
   const accounts = [];
@@ -208,12 +234,12 @@ const DocSidebar = () => {
     : allSettingsSubItems;
 
   return (
-    <div className="sidebar flex flex-col justify-between min-h-screen w-[210px] bg-white border-r border-secondary-grey100/50">
+    <div className="sidebar flex flex-col justify-between min-h-screen w-[190px] bg-white border-r border-secondary-grey100/50">
       {/* Top Section */}
       <div>
         {/* Logo */}
         <div className="px-4 py-3">
-          <img src={logo} alt="logo" className="w-[128px] h-auto" />
+          <img src={logo} alt="logo" className="w-[110px] h-auto" />
         </div>
 
         {/* Hospital/Clinic selector card (below logo) + Switch Account popover */}
@@ -221,7 +247,7 @@ const DocSidebar = () => {
           <button
             type="button"
             onClick={() => setShowSwitch((v) => !v)}
-            className={`w-full border-[0.5px] border-[#B8B8B8] rounded-md px-2 py-2 bg-white flex items-center gap-2 hover:bg-gray-50 ${showSwitch ? "ring-1 ring-[#2372EC]/30" : ""
+            className={`w-full border-[0.5px] border-[#B8B8B8] rounded-md px-2 py-1.5 bg-white flex items-center gap-2 hover:bg-gray-50 ${showSwitch ? "ring-1 ring-[#2372EC]/30" : ""
               }`}
             ref={triggerRef}
             aria-haspopup="true"
@@ -236,15 +262,15 @@ const DocSidebar = () => {
               className="shrink-0"
             />
             <div className="flex-1 min-w-0 text-left">
-              <div className="text-[13px] font-medium text-gray-900 truncate">
+              <div className="text-[12px] font-medium text-gray-900 truncate">
                 {currentAccount?.name || "No workplace"}
               </div>
-              <div className="text-[11px] text-gray-500 leading-tight">
+              <div className="text-[10px] text-gray-500 leading-tight">
                 {currentAccount?.type || "—"}
               </div>
             </div>
             <ChevronDown
-              size={16}
+              size={14}
               className={`text-gray-500 transition-transform ${showSwitch ? "rotate-180" : ""
                 }`}
             />
@@ -336,7 +362,7 @@ const DocSidebar = () => {
                   to={item.path}
                   end={item.path === "/doc"}
                   className={({ isActive }) =>
-                    `flex items-center gap-[6px] py-3 px-4 h-[44px] w-full text-left transition-colors ${isActive
+                    `flex items-center gap-[6px] py-2 px-3 h-[38px] w-full text-left transition-colors ${isActive
                       ? "  bg-gradient-to-r from-[#2372EC] via-[#68A3FF] to-[#2373EC] hover:from-[#1760cd] hover:via-[#1760cd] hover:to-[#1760cd] text-white border-l-[3px] border-[#96BFFF] "
                       : "text-gray-800 hover:bg-gray-100"
                     }`
@@ -347,9 +373,9 @@ const DocSidebar = () => {
                       <img
                         src={isActive ? item.iconSelected : item.iconUnselected}
                         alt={item.alt}
-                        className="w-5 h-5"
+                        className="w-4 h-4"
                       />
-                      <span className="font-normal text-sm">{item.name}</span>
+                      <span className="font-normal text-[13px]">{item.name}</span>
                     </>
                   )}
                 </NavLink>
@@ -362,7 +388,7 @@ const DocSidebar = () => {
                 <button
                   type="button"
                   onClick={() => setOpenSettings((v) => !v)}
-                  className={`w-full flex items-center justify-between py-3 px-4 h-[44px] transition-colors ${isSettingsRoute
+                  className={`w-full flex items-center justify-between py-2 px-3 h-[38px] transition-colors ${isSettingsRoute
                     ? "bg-[#2372EC] text-white border-l-[3px] border-[#96BFFF]"
                     : "text-gray-800 hover:bg-gray-100"
                     }`}
@@ -371,14 +397,14 @@ const DocSidebar = () => {
                     <img
                       src={isSettingsRoute ? settingBlue : settingUnselect}
                       alt="Settings"
-                      className="w-5 h-5"
+                      className="w-4 h-4"
                     />
-                    <span className="font-normal text-sm">Settings</span>
+                    <span className="font-normal text-[13px]">Settings</span>
                   </span>
                   {openSettings ? (
-                    <ChevronUp size={16} />
+                    <ChevronUp size={14} />
                   ) : (
-                    <ChevronDown size={16} />
+                    <ChevronDown size={14} />
                   )}
                 </button>
 
@@ -390,7 +416,7 @@ const DocSidebar = () => {
                           <NavLink
                             to={s.to}
                             className={({ isActive }) =>
-                              `block text-sm px-3 py-2 my-[2px] rounded-sm ${isActive
+                              `block text-[12px] px-3 py-1.5 my-[2px] rounded-sm ${isActive
                                 ? "bg-blue-50 text-gray-900"
                                 : "text-gray-700 hover:bg-gray-50"
                               }`
@@ -404,7 +430,7 @@ const DocSidebar = () => {
                                 key={sub.to}
                                 to={sub.to}
                                 className={({ isActive }) =>
-                                  `block text-xs px-3 py-1 my-[2px] rounded-sm ${isActive
+                                  `block text-[11px] px-3 py-1 my-[2px] rounded-sm ${isActive
                                     ? "bg-blue-100 text-gray-900"
                                     : "text-gray-700 hover:bg-gray-50"
                                   }`
@@ -420,7 +446,7 @@ const DocSidebar = () => {
                           key={s.to}
                           to={s.to}
                           className={({ isActive }) =>
-                            `block text-sm px-3 py-2 my-[2px] rounded-sm ${isActive
+                            `block text-[12px] px-3 py-1.5 my-[2px] rounded-sm ${isActive
                               ? "bg-blue-50 text-gray-900"
                               : "text-gray-700 hover:bg-gray-50"
                             }`
@@ -439,16 +465,81 @@ const DocSidebar = () => {
       </div>
 
       {/* Bottom Section */}
-      <div className="px-4 py-3 border-t border-[#D6D6D6] flex justify-between items-center text-[#626060]">
-        <div className={`flex items-center gap-[6px] w-full text-left `}>
-          <img src={helpWhite} alt="Help & Support" className="w-5 h-5" /> Help
-          & Support
-        </div>
+      <div className="relative">
+        {showHelpMenu && (
+          <div
+            ref={helpPopoverRef}
+            className="absolute left-full bottom-4 ml-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50"
+          >
+            <div
+              className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-3 text-sm text-gray-700"
 
-        <div>
-          <ArrowRight size={18} />
+            >
+              <BookOpen size={16} className="text-gray-500" />
+              <span>Upchar-Q Guide</span>
+              <ExternalLink size={14} className="ml-auto text-gray-400" />
+            </div>
+            <div
+              className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-3 text-sm text-gray-700"
+              onClick={() => {
+                setHelpOpen(true);
+                setShowHelpMenu(false);
+              }}
+            >
+              <LifeBuoy size={16} className="text-gray-500" />
+              <span>Help & Support</span>
+            </div>
+            <div
+              className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-3 text-sm text-gray-700"
+              onClick={() => {
+                setQueryOpen(true);
+                setShowHelpMenu(false);
+              }}
+            >
+              <MessageSquarePlus size={16} className="text-gray-500" />
+              <span>Raise Queries</span>
+            </div>
+            <div
+              className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-3 text-sm text-gray-700"
+              onClick={() => {
+                setFaqOpen(true);
+                setShowHelpMenu(false);
+              }}
+            >
+              <HelpCircle size={16} className="text-gray-500" />
+              <span>FAQ's</span>
+            </div>
+          </div>
+        )}
+
+        <div
+          ref={helpTriggerRef}
+          className="px-3 py-2 border-t border-[#D6D6D6] flex justify-between items-center text-[#626060] cursor-pointer hover:bg-gray-50 transition-colors"
+          onClick={() => setShowHelpMenu(!showHelpMenu)}
+        >
+          <div className={`flex items-center gap-[6px] w-full text-left text-[13px]`}>
+            <img src={helpWhite} alt="Help & Support" className="w-4 h-4" /> Help
+            & Support
+          </div>
+
+          <div>
+            {showHelpMenu ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          </div>
         </div>
       </div>
+
+      <HelpSupportDrawer
+        isOpen={helpOpen}
+        onClose={() => setHelpOpen(false)}
+      />
+      <RaiseQueryDrawer
+        isOpen={queryOpen}
+        onClose={() => setQueryOpen(false)}
+      />
+      <FAQDrawer
+        isOpen={faqOpen}
+        onClose={() => setFaqOpen(false)}
+      />
     </div>
   );
 };

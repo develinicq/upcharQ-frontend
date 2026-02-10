@@ -13,9 +13,9 @@ const getStrength = (pw) => {
 };
 
 const getStrengthLabel = (score) => {
-  if (score <= 2) return { label: 'Weak', color: 'bg-red-500', percent: 33 };
-  if (score <= 4) return { label: 'Medium', color: 'bg-yellow-400', percent: 66 };
-  return { label: 'Strongest', color: 'bg-green-500', percent: 100 };
+  if (score <= 2) return { label: 'Weak', color: 'bg-red-500', percent: 20 };
+  if (score <= 4) return { label: 'Medium', color: 'bg-yellow-400', percent: 40 };
+  return { label: 'Strongest', color: 'bg-green-500', percent: 60 };
 };
 
 const PasswordStrengthBar = ({ password }) => {
@@ -23,12 +23,12 @@ const PasswordStrengthBar = ({ password }) => {
   const { label, color, percent } = getStrengthLabel(score);
 
   return (
-      <div className="flex items-center gap-2">
-        <span className={`text-sm ${color === 'bg-red-500' ? 'text-red-400' : color === 'bg-yellow-400' ? 'text-yellow-600' : 'text-green-600'}`}>{label}</span>
-        <div className="flex-1 h-[6px] bg-gray-100 rounded-full overflow-hidden">
-          <div className={`${color} h-full rounded-full transition-all duration-300`} style={{ width: `${percent}%` }} />
-        </div>
+    <div className="flex items-center gap-2">
+      <span className={`text-[14px] font-light ${color === 'bg-red-500' ? 'text-red-400' : color === 'bg-yellow-400' ? 'text-yellow-600' : 'text-green-600'}`}>{label}</span>
+      <div className="flex-1 h-[4px] bg-gray-100 rounded-full overflow-hidden">
+        <div className={`${color} h-full rounded-full transition-all duration-300`} style={{ width: `${percent}%` }} />
       </div>
+    </div>
   );
 };
 

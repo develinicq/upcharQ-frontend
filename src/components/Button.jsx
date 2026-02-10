@@ -1,5 +1,5 @@
 import React from "react";
-import clsx from "clsx";
+import { cn } from "../lib/utils";
 import { XCircle, Clipboard, Clock, ChevronDown } from "lucide-react";
 
 // Variants
@@ -38,7 +38,7 @@ export default function Button({
 
   return (
     <button
-      className={clsx(
+      className={cn(
         sizes[size],
         disabled ? variants["disabled"] : variants[variant],
         "inline-flex items-center justify-center gap-2 transition-colors duration-200 font-medium",

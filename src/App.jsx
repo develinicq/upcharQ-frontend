@@ -14,7 +14,7 @@ import { RegistrationProvider } from "./SuperAdmin/context/RegistrationContext";
 import SuperAdminSignIn from "./SuperAdmin/pages/SignIn";
 import { ProtectedAdminRoute, PublicAdminRoute } from "./SuperAdmin/components/Guard/AdminRoutes";
 import { ProtectedHospitalRoute, ProtectedDoctorRoute, PublicHospitalRoute, PublicDoctorRoute } from "./HospitalModule/Components/Guard/HospitalRoutes";
-import { ProtectedFrontDeskRoute } from "./FrontDeskModule/Components/Guard/FrontDeskRoutes";
+import { ProtectedFrontDeskRoute, PublicFrontDeskRoute } from "./FrontDeskModule/Components/Guard/FrontDeskRoutes";
 import { ProtectedHospitalFrontDeskRoute } from "./HospitalFDModule/Components/Guard/HospitalFrontDeskRoutes";
 import GetStarted from "./pages/GetStarted";
 import OnboardingFlow from "./DoctorModule/Pages/Login/OnboardingFlow";
@@ -68,6 +68,7 @@ import DisplayGraph from "./components/ui/Graphs/DisplayGraph";
 
 // DocSignIn route intentionally not wired per requirement
 import DocSignIn from "./DoctorModule/Pages/Login/SignIn";
+import FDSignIn from "./FrontDeskModule/Pages/Login/SignIn";
 
 
 function App() {
@@ -147,7 +148,11 @@ function App() {
       {/* Back-compat redirects */}
       <Route
         path="fd/signin"
-        element={<Navigate to="/signin?variant=fd" replace />}
+        element={
+          <PublicFrontDeskRoute>
+            <FDSignIn />
+          </PublicFrontDeskRoute>
+        }
       />
       <Route
         path="hfd/signin"

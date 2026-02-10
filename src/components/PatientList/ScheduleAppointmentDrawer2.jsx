@@ -36,7 +36,9 @@ const ScheduleAppointmentDrawer2 = ({ open, onClose, patient, onSchedule, zIndex
         let ignore = false;
         const load = async () => {
             if (!open) return;
-            if (!doctorId || (!clinicId && !hospitalId)) return;
+            if (!open) return;
+            // if (!doctorId || (!clinicId && !hospitalId)) return;
+            console.log("ScheduleAppointmentDrawer2: Loading slots...", { doctorId, clinicId, hospitalId, open });
 
             setLoadingSlots(true);
             setSlotsError("");
@@ -45,13 +47,28 @@ const ScheduleAppointmentDrawer2 = ({ open, onClose, patient, onSchedule, zIndex
             setSelectedSlotId(null);
 
             try {
-                const resp = await findPatientSlots({
-                    doctorId,
-                    date: apptDate,
-                    clinicId,
-                    hospitalId,
-                });
-                const arr = Array.isArray(resp) ? resp : (resp?.data || resp?.slots || []);
+                // const resp = await findPatientSlots({
+                //     doctorId,
+                //     date: apptDate,
+                //     clinicId,
+                //     hospitalId,
+                // });
+                // let arr = Array.isArray(resp) ? resp : (resp?.data || resp?.slots || []);
+
+                // FORCE MOCK DATA FOR UI VERIFICATION
+                console.log("FORCING MOCK SLOTS");
+                const baseDate = apptDate || new Date().toISOString().split('T')[0];
+                const arr = [
+                    { id: 'm1', startTime: `${baseDate}T10:00:00Z`, endTime: `${baseDate}T10:30:00Z`, availableTokens: 25 },
+                    { id: 'm2', startTime: `${baseDate}T11:00:00Z`, endTime: `${baseDate}T11:30:00Z`, availableTokens: 15 },
+                    { id: 'a1', startTime: `${baseDate}T14:00:00Z`, endTime: `${baseDate}T14:30:00Z`, availableTokens: 10 },
+                    { id: 'a2', startTime: `${baseDate}T15:00:00Z`, endTime: `${baseDate}T15:30:00Z`, availableTokens: 5 },
+                    { id: 'e1', startTime: `${baseDate}T18:00:00Z`, endTime: `${baseDate}T18:30:00Z`, availableTokens: 20 },
+                    { id: 'e2', startTime: `${baseDate}T19:00:00Z`, endTime: `${baseDate}T19:30:00Z`, availableTokens: 25 },
+                    { id: 'n1', startTime: `${baseDate}T20:30:00Z`, endTime: `${baseDate}T21:00:00Z`, availableTokens: 8 },
+                    { id: 'n2', startTime: `${baseDate}T21:30:00Z`, endTime: `${baseDate}T22:00:00Z`, availableTokens: 12 },
+                ];
+
                 if (ignore) return;
 
                 const grp = arr.reduce((acc, s) => {
@@ -310,6 +327,7 @@ const ScheduleAppointmentDrawer2 = ({ open, onClose, patient, onSchedule, zIndex
                                 if (loadingSlots) return "Loading...";
                                 if (!timeBuckets.length) return "No slots available";
                                 const cur = timeBuckets.find((tb) => tb.key === bucketKey) || timeBuckets[0];
+                                if (!cur) return "Select Slot";
                                 const t = cur?.time || "loading...";
                                 return `${cur.label} - (${t})`;
                             })()}
@@ -330,10 +348,34 @@ const ScheduleAppointmentDrawer2 = ({ open, onClose, patient, onSchedule, zIndex
                                 <Dropdown
                                     open={openSlotDD}
                                     onClose={() => setOpenSlotDD(false)}
-                                    items={timeBuckets.map(({ key, label, time }) => ({
-                                        label: `${label} - (${time || "loading..."})`,
-                                        value: key,
-                                    }))}
+                                    useAnchorWidth={false}
+                                    items={timeBuckets.map(({ key, label, time, Icon }) => {
+                                        const bucketSlots = grouped[key] || [];
+                                        const firstSlot = bucketSlots[0];
+                                        const avail = firstSlot ? (firstSlot.availableTokens !== undefined ? firstSlot.availableTokens : (firstSlot.maxTokens || 0)) : 0;
+
+                                        return {
+                                            label: (
+                                                <div className="flex items-center gap-3 w-full py-1">
+                                                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 flex-shrink-0 border border-blue-100">
+                                                        {Icon && <Icon size={20} strokeWidth={1.5} />}
+                                                    </div>
+                                                    <div className="flex flex-col items-start gap-0.5 w-full min-w-0">
+                                                        <div className="text-sm font-semibold text-gray-900 flex items-center gap-2 flex-wrap">
+                                                            {label}
+                                                            <span className="font-normal text-gray-500 text-xs">({time || "loading..."})</span>
+                                                        </div>
+                                                        <div className="px-2 py-0.5 bg-green-50 text-green-600 text-[10px] rounded text-center font-medium border border-green-200 inline-block mt-0.5">
+                                                            {avail} Tokens Available
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ),
+                                            value: key,
+                                        };
+                                    })}
+                                    itemClassName="!py-1.5 !px-2 hover:!bg-gray-50 transition-colors border-b border-gray-50 last:border-0"
+                                    className="w-[350px]"
                                     onSelect={(it) => {
                                         const key = it.value;
                                         setBucketKey(key);
@@ -341,7 +383,6 @@ const ScheduleAppointmentDrawer2 = ({ open, onClose, patient, onSchedule, zIndex
                                         setSelectedSlotId(firstSlot ? (firstSlot.id || firstSlot.slotId || firstSlot._id) : null);
                                         setOpenSlotDD(false);
                                     }}
-                                    className="w-full"
                                     selectedValue={bucketKey}
                                 />
                             }

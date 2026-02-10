@@ -1,16 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
-import GeneralDrawer from "@/components/GeneralDrawer/GeneralDrawer";
-import InputWithMeta from "@/components/GeneralDrawer/InputWithMeta";
-import Dropdown from "@/components/GeneralDrawer/Dropdown";
-import RadioButton from "@/components/GeneralDrawer/RadioButton";
+import GeneralDrawer from "../../../../components/GeneralDrawer/GeneralDrawer";
+import InputWithMeta from "../../../../components/GeneralDrawer/InputWithMeta";
+import Dropdown from "../../../../components/GeneralDrawer/Dropdown";
+import RadioButton from "../../../../components/GeneralDrawer/RadioButton";
 import { ChevronDown, Trash2 } from "lucide-react";
-import { registerStaff } from "@/services/staff/registerStaffService";
-import { fetchAllRoles } from "@/services/rbac/roleService";
-import useDoctorAuthStore from "@/store/useDoctorAuthStore";
-import useClinicStore from "@/store/settings/useClinicStore";
-import useStaffStore from "@/store/useStaffStore";
-import useToastStore from "@/store/useToastStore";
-import UniversalLoader from "@/components/UniversalLoader";
+import { registerStaff } from "../../../../services/staff/registerStaffService";
+import { fetchAllRoles } from "../../../../services/rbac/roleService";
+import useDoctorAuthStore from "../../../../store/useDoctorAuthStore";
+import useClinicStore from "../../../../store/settings/useClinicStore";
+import useStaffStore from "../../../../store/useStaffStore";
+import useToastStore from "../../../../store/useToastStore";
+import UniversalLoader from "../../../../components/UniversalLoader";
 
 export default function InviteStaffDrawer({ open, onClose, initial = [], onSendInvite, onSend }) {
   const [rows, setRows] = useState([

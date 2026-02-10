@@ -8,6 +8,8 @@ import { logoutAll } from '../../utils/authUtils';
 import NotificationDrawer from '../../components/NotificationDrawer.jsx';
 import AddPatientDrawer from '../../components/PatientList/AddPatientDrawer.jsx';
 import BookAppointmentDrawer from '../../components/Appointment/BookAppointmentDrawer.jsx';
+import GlobalSearch from "../../components/GlobalSearch";
+import SearchInput from "../../components/SearchInput";
 
 const Partition = () => (
 	<div className='w-[8.5px] h-[20px] flex gap-[10px] items-center justify-center'>
@@ -64,6 +66,7 @@ const FDNavbar = ({ useAuthStore = useFrontDeskAuthStore, BookDrawer = BookAppoi
 	const [showNotifications, setShowNotifications] = useState(false);
 	const profileRef = useRef(null);
 	const dropdownRef = useRef(null);
+	const [showGlobalSearch, setShowGlobalSearch] = useState(false);
 
 	useEffect(() => {
 		if (fetchMe) {
@@ -77,9 +80,9 @@ const FDNavbar = ({ useAuthStore = useFrontDeskAuthStore, BookDrawer = BookAppoi
 
 	useEffect(() => {
 		const handler = (e) => {
-			if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+			if ((e.ctrlKey || e.metaKey) && (e.key === '/' || e.key === 'k')) {
 				e.preventDefault();
-				searchRef.current?.focus();
+				setShowGlobalSearch(true);
 			}
 		};
 		window.addEventListener('keydown', handler);
@@ -120,18 +123,14 @@ const FDNavbar = ({ useAuthStore = useFrontDeskAuthStore, BookDrawer = BookAppoi
 				<span className='text-sm text-[#424242]'>Dashboard</span>
 			</div>
 			<div className='ml-auto'>
-				<div className='relative w-[360px] max-w-[60vw]'>
-					<Search className='absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#959595]' />
-					<input
-						ref={searchRef}
-						type='text'
-						placeholder='Search Patients'
-						className='w-full h-8 rounded border border-[#E3E3E3] bg-[#F9F9F9] pl-8 pr-16 text-sm text-[#424242] placeholder:text-[#959595] focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#2372EC]'
-					/>
-					<div className='absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-[#6B7280] border border-[#E5E7EB] rounded px-1 py-0.5 bg-white'>
-						Ctrl+/
-					</div>
-				</div>
+				<SearchInput
+					ref={searchRef}
+					placeholder="Search Patients"
+					showCtrlK
+					readOnly
+					onClick={() => setShowGlobalSearch(true)}
+					onFocus={() => setShowGlobalSearch(true)}
+				/>
 			</div>
 			<div className='flex items-center gap-2'>
 				<div className="relative" ref={dropdownRef}>
@@ -221,6 +220,10 @@ const FDNavbar = ({ useAuthStore = useFrontDeskAuthStore, BookDrawer = BookAppoi
 				clinicId={user?.clinicId}
 				hospitalId={undefined}
 				onSave={() => setBookApptOpen(false)}
+			/>
+			<GlobalSearch
+				isOpen={showGlobalSearch}
+				onClose={() => setShowGlobalSearch(false)}
 			/>
 		</div>
 	);

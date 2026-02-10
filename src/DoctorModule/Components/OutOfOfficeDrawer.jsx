@@ -2,11 +2,11 @@ import React, { useState, useMemo, useEffect } from "react";
 import GeneralDrawer from "../../components/GeneralDrawer/GeneralDrawer";
 import Toggle from "../../components/FormItems/Toggle";
 import InputWithMeta from "../../components/GeneralDrawer/InputWithMeta";
-import { Calendar as ShadcnCalendar } from "@/components/ui/calendar";
+import { Calendar as ShadcnCalendar } from "../../components/ui/calendar";
 import calendarWhite from "../../../public/Doctor_module/sidebar/calendar_white.png";
 import { updateOutOfOfficeStatus, getOutOfOfficeStatus } from "../../services/doctorService";
-import useToastStore from "@/store/useToastStore";
-import useOOOStore from "@/store/useOOOStore";
+import useToastStore from "../../store/useToastStore";
+import useOOOStore from "../../store/useOOOStore";
 import UniversalLoader from "../../components/UniversalLoader";
 
 const clockIcon = '/clock.png';

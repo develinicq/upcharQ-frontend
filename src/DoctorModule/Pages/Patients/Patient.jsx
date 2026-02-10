@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import PatientHeader from "../../../components/PatientList/Header";
 // Replaced the custom PatientTable with the reusable SampleTable component
 import SampleTable from "../../../pages/SampleTable.jsx";
@@ -46,6 +47,7 @@ const demoPatients = Array.from({ length: 300 }).map((_, i) => ({
 }));
 
 export default function Patient() {
+  const navigate = useNavigate();
   const [selected, setSelected] = useState("all");
   const [addOpen, setAddOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -218,8 +220,7 @@ export default function Patient() {
               stickyLeftWidth={260}
               stickyRightWidth={160}
               onRowClick={(row) => {
-                setSelectedPatientDetails(row);
-                setDetailsOpen(true);
+                navigate(`/doc/patients/${row.patientId}`, { state: { patient: row } });
               }}
             />
           )}

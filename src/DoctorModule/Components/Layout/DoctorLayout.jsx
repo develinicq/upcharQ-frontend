@@ -11,9 +11,9 @@ export default function Doctor_layout() {
       </div>
 
       {/* Main Content Area - Constrained to viewport minus sidebar */}
-      <div className="flex flex-col flex-1 ml-[210px] max-w-[calc(100vw-210px)] overflow-x-hidden">
+      <div className="flex flex-col flex-1 ml-[190px] max-w-[calc(100vw-190px)] overflow-x-hidden">
         {/* Fixed Navbar */}
-        <div className="fixed top-0 right-0 left-[210px] z-30 bg-white">
+        <div className="fixed top-0 right-0 left-[190px] z-30 bg-white">
           <DocNavbar className="w-full" />
         </div>
 

@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import HelpSupportDrawer from '@/SuperAdmin/components/HelpSupport/HelpSupportDrawer'
 import Input from '../../../components/FormItems/Input'
 import Button from '../../../components/Button'
 import PasswordRequirements from '../../../components/FormItems/PasswordRequirements'
@@ -9,6 +10,7 @@ const HOnboarding = ({ onContinue }) => {
   const [formData, setFormData] = useState({ password: '', confirmPassword: '' })
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [isHelpOpen, setIsHelpOpen] = useState(false)
 
   const details = {
     user: {
@@ -23,21 +25,21 @@ const HOnboarding = ({ onContinue }) => {
     invitation: { type: 'HOSPITAL' },
   }
 
-  const handleChange = (e) => setFormData((p)=>({ ...p, [e.target.name]: e.target.value }))
+  const handleChange = (e) => setFormData((p) => ({ ...p, [e.target.name]: e.target.value }))
 
-  const reqs = [ (pw)=>pw.length>=8 && pw.length<=15, (pw)=>/[A-Z]/.test(pw), (pw)=>/[a-z]/.test(pw), (pw)=>/[0-9]/.test(pw), (pw)=>/[!@#$%^&*]/.test(pw) ]
-  const valid = reqs.every(fn=>fn(formData.password))
-  const match = formData.password && formData.confirmPassword && formData.password===formData.confirmPassword
+  const reqs = [(pw) => pw.length >= 8 && pw.length <= 15, (pw) => /[A-Z]/.test(pw), (pw) => /[a-z]/.test(pw), (pw) => /[0-9]/.test(pw), (pw) => /[!@#$%^&*]/.test(pw)]
+  const valid = reqs.every(fn => fn(formData.password))
+  const match = formData.password && formData.confirmPassword && formData.password === formData.confirmPassword
 
   const Eye = ({ on }) => (
-    <span className="text-gray-500 hover:text-gray-700 inline-flex items-center" onClick={() => on === 'pw' ? setShowPassword(v=>!v) : setShowConfirmPassword(v=>!v)} role="button" tabIndex={0}>
+    <span className="text-gray-500 hover:text-gray-700 inline-flex items-center" onClick={() => on === 'pw' ? setShowPassword(v => !v) : setShowConfirmPassword(v => !v)} role="button" tabIndex={0}>
       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg>
     </span>
   )
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-2">
-      <div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex flex-col relative overflow-hidden">
+      <div className="flex-1 flex items-center justify-center p-2">
         <div className="bg-white rounded-2xl flex flex-col shadow-lg w-full max-w-xl border-2 border-blue-200">
           <div className="p-6 sm:p-8 flex flex-col gap-6">
             <div className="text-center gap-1 flex flex-col">
@@ -55,11 +57,11 @@ const HOnboarding = ({ onContinue }) => {
             />
             <form className="flex flex-col gap-6">
               <div className="relative flex flex-col gap-2">
-                <Input type={showPassword ? 'text':'password'} id="password" name="password" value={formData.password} onChange={handleChange} placeholder="Minimum 8 character" autoComplete="new-password" label="Create Password" compulsory icon={<Eye on='pw'/>} />
+                <Input type={showPassword ? 'text' : 'password'} id="password" name="password" value={formData.password} onChange={handleChange} placeholder="Minimum 8 character" autoComplete="new-password" label="Create Password" compulsory icon={<Eye on='pw' />} />
                 <PasswordStrengthBar password={formData.password} />
               </div>
               <div>
-                <Input type={showConfirmPassword ? 'text':'password'} id="confirmPassword" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} placeholder="Minimum 8 character" autoComplete="new-password" label="Confirm Password" compulsory icon={<Eye on='cpw'/>} />
+                <Input type={showConfirmPassword ? 'text' : 'password'} id="confirmPassword" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} placeholder="Minimum 8 character" autoComplete="new-password" label="Confirm Password" compulsory icon={<Eye on='cpw' />} />
                 {formData.confirmPassword && match && (<p className="text-xs text-green-600 mt-1">Passwords Matched</p>)}
                 {formData.confirmPassword && !match && (<p className="text-xs text-red-500 mt-1">Passwords do not match</p>)}
               </div>
@@ -81,6 +83,22 @@ const HOnboarding = ({ onContinue }) => {
           </div>
         </div>
       </div>
+
+      <div className="px-8 py-6 flex justify-between items-center w-full z-10 text-white/80">
+        <button
+          className="flex items-center gap-2 hover:text-white transition-colors"
+          onClick={() => setIsHelpOpen(true)}
+        >
+          <span className="w-5 h-5 flex items-center justify-center">
+            <img src="/Help.svg" alt="Help" className="w-full h-full opacity-80 brightness-0 invert" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'block'; }} />
+            <span className="hidden w-3 h-3 rounded-full border border-current items-center justify-center text-[10px]" style={{ display: 'none' }}>?</span>
+          </span>
+          <span className="text-[11px] font-normal">Help & Support</span>
+          <svg className="w-3 h-3 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+        </button>
+        <span className="text-[8px] opacity-80">© 2025, Bloomevera Solutions LLP. All Rights Reserved.</span>
+      </div>
+      <HelpSupportDrawer isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
     </div>
   )
 }

@@ -16,17 +16,19 @@ import {
   user_unselected_module
 } from "../../../public/index.js";
 // import useAuthStore from "../../store/useAuthStore";
-import useDoctorAuthStore from "@/store/useDoctorAuthStore";
-import useHospitalAuthStore from "@/store/useHospitalAuthStore";
-import useSuperAdminAuthStore from "@/store/useSuperAdminAuthStore";
-import useUIStore from "@/store/useUIStore";
+import useDoctorAuthStore from "../../store/useDoctorAuthStore";
+import useHospitalAuthStore from "../../store/useHospitalAuthStore";
+import useSuperAdminAuthStore from "../../store/useSuperAdminAuthStore";
+import useUIStore from "../../store/useUIStore";
 import AvatarCircle from "../../components/AvatarCircle";
+import GlobalSearch from "../../components/GlobalSearch";
+
 import SearchInput from "../../components/SearchInput";
 import { getDoctorMe } from "../../services/authService";
-import { getPublicUrl } from "@/services/uploadsService";
-import { getOutOfOfficeStatus } from "@/services/doctorService";
-import useOOOStore from "@/store/useOOOStore";
-import { logoutAll } from "@/utils/authUtils";
+import { getPublicUrl } from "../../services/uploadsService";
+import { getOutOfOfficeStatus } from "../../services/doctorService";
+import useOOOStore from "../../store/useOOOStore";
+import { logoutAll } from "../../utils/authUtils";
 import {
   Mail,
   Phone,
@@ -109,310 +111,130 @@ const DocNavbar = ({
   const navigate = useNavigate();
   const location = useLocation();
   const searchRef = useRef(null);
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false);
 
-  const getTitle = () => {
-    const path = location.pathname;
-
-    // Doctor Module Paths
-    if (path === "/doc" || path === "/doc/") return "Dashboard";
-    if (path.startsWith("/doc/queue")) return "Queue Management";
-    if (path.startsWith("/doc/calendar")) return "Calendar";
-    if (path.startsWith("/doc/patients")) {
-      if (matchPath("/doc/patients/:id", path)) return "Patient Profile";
-      return "Patients List";
-    }
-    if (path.includes("/doc/settings/account")) return "Personal Details";
-    if (path.includes("/doc/settings/consultation")) return "Consultation Details";
-    if (path.includes("/doc/settings/clinics")) return "Clinical Details";
-    if (path.includes("/doc/settings/staff-permissions")) return "Staff Permissions";
-    if (path.includes("/doc/settings/security")) return "Security Settings";
-    if (path.includes("/doc/settings/billing")) return "Subscriptions/Billing";
-    if (path.includes("/doc/settings/rx-template")) return "Rx Template";
-
-    // Hospital Module Paths
-    if (path === "/hospital" || path === "/hospital/") return "Dashboard";
-    if (path.startsWith("/hospital/queue")) return "Queue Management";
-    if (path.startsWith("/hospital/calendar")) return "Calendar";
-    if (path.startsWith("/hospital/patients")) {
-      if (matchPath("/hospital/patients/:id", path)) return "Patient Profile";
-      return "Patients List";
-    }
-    if (path.startsWith("/hospital/doctors")) return "Doctor List";
-    if (matchPath("/hospital/doctor/:id", path)) return "Doctor Profile";
-
-    if (
-      path.includes("/hospital/settings/account") ||
-      path.includes("/hospital/settings/timing") ||
-      path.includes("/hospital/settings/surgeries")
-    ) return "Hospital Profile Details";
-
-    if (path.includes("/hospital/settings/staff-permissions")) return "Staff Permissions";
-    if (path.includes("/hospital/settings/rx-template")) return "Rx Template";
-    if (path.includes("/hospital/settings/subscriptions-billing")) return "Subscriptions/Billing";
-    if (path.includes("/hospital/settings/security")) return "Security Settings";
-
-    return "Dashboard";
-  };
-
-  const pageTitle = getTitle();
-
-  // Use new doctor auth store
+  // -- Stores --
   const {
-    user: singleDoctorUser,
-    loading: singleDoctorLoading,
-    // We don't have error or promise exposed directly in the simple store yet, but user object is enough
+    user: doctorDetails,
+    loading: doctorLoading,
+    error: doctorError,
+    fetchMe: fetchDoctorMe
   } = useDoctorAuthStore();
 
-  // Fallback legacy logic if needed (optional) or just rely on hospital/doctor store
+  const {
+    oooData,
+    fetchOOOStatus
+  } = useOOOStore();
 
-  // Hospital Store
-  const { roleNames: hospitalRoles, user: storeHospitalUser } = useHospitalAuthStore();
+  const setIsLoggingOut = useUIStore((state) => state.setIsLoggingOut);
 
-  const [copied, setCopied] = useState(false);
-  const [internalHospitalPhoto, setInternalHospitalPhoto] = useState("");
-  const [doctorProfilePhoto, setDoctorProfilePhoto] = useState("");
-
-  const effectiveHospitalData = hospitalAdminData || storeHospitalUser;
-
-  // Distinguish scenarios
-  const isDualRole = (hospitalRoles?.includes("HOSPITAL_ADMIN") && hospitalRoles?.includes("DOCTOR")) || (effectiveHospitalData?.isDoctor);
-
-  // ALWAYS use doctor data from useDoctorAuthStore in doctor module
-  // Even for dual-role users, doctor module should show doctor details from /doctors/me
-  const doctorDetails = singleDoctorUser;
-  const doctorLoading = singleDoctorLoading;
-  const doctorError = ""; // Simplified for now
-
-
-  const effectiveHospitalPhoto = hospitalAdminPhoto || internalHospitalPhoto;
-
-  useEffect(() => {
-    const fetchHospitalImage = async () => {
-      if (effectiveHospitalData?.profilePhoto && !hospitalAdminPhoto) {
-        const url = await getPublicUrl(effectiveHospitalData.profilePhoto);
-        setInternalHospitalPhoto(url);
-      }
-    };
-    fetchHospitalImage();
-  }, [effectiveHospitalData?.profilePhoto, hospitalAdminPhoto]);
-
-  // Fetch doctor profile photo
-  useEffect(() => {
-    const fetchDoctorImage = async () => {
-      if (doctorDetails?.profilePhoto) {
-        const url = await getPublicUrl(doctorDetails.profilePhoto);
-        setDoctorProfilePhoto(url);
-      }
-    };
-    fetchDoctorImage();
-  }, [doctorDetails?.profilePhoto]);
-  const currentPath = window.location.pathname.toLowerCase();
-  const activeModule = currentPath.startsWith('/hospital') ? 'hospital' : 'doctor';
-
-  const switchToHospital = () => { navigate('/hospital'); };
-  const switchToDoctor = () => { navigate('/doc'); };
-
-  const internalSwitcher = isDualRole ? (
-    <div className="flex items-center gap-1">
-      <button
-        type="button"
-        onClick={switchToHospital}
-        className={`flex items-center justify-center py-1 px-[6px] h-7 w-7 rounded-[4px]  ${activeModule === 'hospital' ? 'border bg-blue-primary250 border-blue-primary150/50' : 'bg-white hover:bg-secondary-grey100'}  transition-colors`}
-        aria-label="Hospital Module"
-        title="Hospital"
-      >
-        <img
-          src={activeModule === 'hospital' ? hospital_selected_module : hospital_unselected_module}
-          alt="Hospital"
-          className="w-4 h-4"
-        />
-      </button>
-      <button
-        type="button"
-        onClick={switchToDoctor}
-        className={`flex items-center justify-center h-7 w-7 rounded-[4px]  ${activeModule === 'doctor' ? 'bg-blue-primary250 border border-blue-primary150/50' : 'bg-white hover:bg-secondary-grey100/50'}  transition-colors`}
-        aria-label="Doctor Module"
-        title="Doctor"
-      >
-        <img
-          src={activeModule === 'doctor' ? user_selected_module : user_unselected_module}
-          alt="Doctor"
-          className="w-4 h-4"
-        />
-      </button>
-    </div>
-  ) : null;
-
-  const finalSwitcher = moduleSwitcher || internalSwitcher;
-
+  // -- Local State --
   const [showProfile, setShowProfile] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const profileRef = useRef(null);
-  const addMenuRef = useRef(null);
   const [showAddMenu, setShowAddMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  // Drawer States
   const [addPatientOpen, setAddPatientOpen] = useState(false);
   const [bookApptOpen, setBookApptOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [showOutOfOfficeDrawer, setShowOutOfOfficeDrawer] = useState(false);
-  const { oooData, fetchOOOStatus } = useOOOStore();
 
-  // Focus search when pressing Ctrl+/
+  const [copied, setCopied] = useState(false);
+
+  // Refs
+  const profileRef = useRef(null);
+  const addMenuRef = useRef(null);
+
+  // -- Helpers --
+  const getTitle = () => {
+    const path = location.pathname;
+    if (path === "/doc" || path === "/doc/") return "Dashboard";
+    if (path.includes("/doc/queue")) return "Queue Management";
+    if (path.includes("/doc/patients")) return "Patients";
+    if (path.includes("/doc/calendar")) return "Calendar";
+    if (path.includes("/doc/settings")) return "Settings";
+    if (path.includes("/doc/profile")) return "My Profile";
+    if (path.includes("/doc/subscription")) return "Subscription";
+    return "Dashboard";
+  };
+  const pageTitle = getTitle();
+
+  const isHospitalAdmin = !!hospitalAdminData;
+  const isSingleDoctor = !isHospitalAdmin;
+
+  // -- Derived Data for UI --
+  const finalDisplayName = hospitalAdminData ? hospitalAdminData.name : (doctorDetails?.name || doctorDetails?.titledName);
+  const finalAvatar = hospitalAdminData ? hospitalAdminPhoto : (doctorDetails?.avatar || doctorDetails?.photo);
+
+  const finalTitledName = doctorDetails?.titledName || doctorDetails?.name;
+  const finalDesignation = doctorDetails?.designation || doctorDetails?.specialization;
+  const finalEducation = doctorDetails?.education;
+  const finalEmail = doctorDetails?.emailId || doctorDetails?.email;
+  const finalPhone = doctorDetails?.phoneNumber || doctorDetails?.phone;
+  const finalCode = doctorDetails?.doctorCode || doctorDetails?.code;
+
+  const finalSwitcher = moduleSwitcher;
+  const finalLoading = isHospitalAdmin ? false : doctorLoading;
+
+  // -- Effects --
+
+  // Fetch Doctor Data if needed
+  useEffect(() => {
+    if (isSingleDoctor && !doctorDetails && !doctorLoading) {
+      if (fetchDoctorMe) fetchDoctorMe();
+    }
+  }, [isSingleDoctor, doctorDetails, doctorLoading, fetchDoctorMe]);
+
+  // Fetch OOO Status
+  useEffect(() => {
+    if (isSingleDoctor && doctorDetails?.id) {
+      if (fetchOOOStatus) fetchOOOStatus();
+    }
+  }, [isSingleDoctor, doctorDetails?.id, fetchOOOStatus]);
+
+  // Close menus on click outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setShowProfile(false);
+      }
+      if (addMenuRef.current && !addMenuRef.current.contains(event.target)) {
+        setShowAddMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Keyboard shortcut for search
   useEffect(() => {
     const handler = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "/") {
+      if ((e.ctrlKey || e.metaKey) && (e.key === "/" || e.key === "k")) {
         e.preventDefault();
-        searchRef.current?.focus();
+        setShowGlobalSearch(true);
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  // Close on outside click / Escape
-  useEffect(() => {
-    const onClick = (e) => {
-      if (profileRef.current && !profileRef.current.contains(e.target))
-        setShowProfile(false);
-      if (addMenuRef.current && !addMenuRef.current.contains(e.target))
-        setShowAddMenu(false);
-    };
-    const onKey = (e) => {
-      if (e.key === "Escape") {
-        setShowProfile(false);
-        setShowAddMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", onClick);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onClick);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, []);
-
-
-  useEffect(() => {
-    const { isAuthenticated, fetchMe, user } = useDoctorAuthStore.getState();
-    const { token: hToken, roleNames: hRoles } = useHospitalAuthStore.getState();
-
-    // Check if user should have access to doctor data:
-    // 1. Single doctor: authenticated in doctor store
-    // 2. Dual-role: authenticated in hospital store with DOCTOR role
-    const isSingleDoctor = isAuthenticated();
-    const isDualRoleDoctor = hToken && hRoles?.includes("DOCTOR");
-
-    // Only fetch doctor data if we're in the doctor module AND user has doctor access AND data not cached
-    const shouldFetchDoctorData = activeModule === 'doctor' && (isSingleDoctor || isDualRoleDoctor) && !user;
-
-    if (shouldFetchDoctorData) {
-      fetchMe();
-      fetchOOOStatus();
-    }
-  }, [activeModule, fetchOOOStatus]);
-
-  const handleOOOSave = (newData) => {
-    // Note: The drawer now handles the store update internally via useOOOStore.updateOOOStatus.
+  // -- Handlers --
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    logoutAll(); // utils
+    navigate("/login");
   };
 
-  const handleCopyProfileLink = async () => {
-    try {
-      const code = doctorDetails?.doctorCode || doctorDetails?.userId;
-      const url = code
-        ? `${window.location.origin}/doctor/${code}`
-        : window.location.origin;
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch (e) {
-      // no-op
-    }
+  const handleCopyProfileLink = () => {
+    const link = `${window.location.origin}/book-appointment/${doctorDetails?.id}`;
+    navigator.clipboard.writeText(link);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleLogout = () => {
-    logoutAll();
-
-    // Redirect based on current active module
-    if (activeModule === 'hospital') {
-      navigate("/hospital/signin", { replace: true });
-    } else {
-      navigate("/signin", { replace: true });
-    }
+  const handleOOOSave = () => {
+    setShowOutOfOfficeDrawer(false);
   };
-
-  // Derive displayable name: two words max, no 'Dr.' prefix
-  const getDoctorDisplayName = (details) => {
-    if (!details) return "";
-    const nameFromFields = [details?.firstName, details?.lastName]
-      .filter(Boolean)
-      .join(" ")
-      .trim();
-    const raw = String(details?.name || nameFromFields || "").trim();
-    if (!raw) return "";
-    // Remove leading titles like Dr, Dr., Doctor (case-insensitive)
-    const cleaned = raw.replace(/^(?:dr\.?|doctor)\s+/i, "").trim();
-    // Limit to two words
-    const twoWords = cleaned.split(/\s+/).slice(0, 2).join(" ");
-    return twoWords || cleaned;
-  };
-  const displayName = doctorLoading ? "" : getDoctorDisplayName(doctorDetails);
-
-  // For dropdown: ensure a visible title 'Dr.' precedes the full name
-  const getDoctorNameWithTitle = (details) => {
-    if (!details) return "";
-    const nameFromFields = [details?.firstName, details?.lastName]
-      .filter(Boolean)
-      .join(" ")
-      .trim();
-    const raw = String(details?.name || nameFromFields || "").trim();
-    if (!raw) return "";
-    // If already has a leading Dr/Dr./Doctor keep it; else prefix 'Dr.'
-    if (/^(?:dr\.?|doctor)\s+/i.test(raw)) return raw;
-    return `Dr. ${raw}`;
-  };
-  const titledName = doctorLoading ? "" : getDoctorNameWithTitle(doctorDetails);
-
-  // Context-aware data selection based on active module
-  // In hospital module: show hospital admin data
-  // In doctor module: show doctor data (even for dual-role users)
-  const isInHospitalModule = activeModule === 'hospital';
-
-  const formatHospitalEducation = (edu) => {
-    if (!Array.isArray(edu)) return "";
-    const sorted = [...edu].sort((a, b) => {
-      if (a.graduationType === 'UG') return -1;
-      if (b.graduationType === 'UG') return 1;
-      return 0;
-    });
-    return sorted.map(e => e.degree).join(", ");
-  };
-
-  const finalDisplayName = isInHospitalModule && effectiveHospitalData
-    ? getDoctorDisplayName(effectiveHospitalData)
-    : displayName;
-  const finalTitledName = isInHospitalModule && effectiveHospitalData
-    ? (effectiveHospitalData?.name || "")
-    : titledName;
-  const finalAvatar = isInHospitalModule && effectiveHospitalData
-    ? effectiveHospitalPhoto
-    : doctorProfilePhoto; // Show doctor profile photo in doctor module
-  const finalEmail = isInHospitalModule && effectiveHospitalData
-    ? effectiveHospitalData?.emailId
-    : doctorDetails?.emailId;
-  const finalPhone = isInHospitalModule && effectiveHospitalData
-    ? effectiveHospitalData?.phone
-    : doctorDetails?.contactNumber;
-  const finalCode = isInHospitalModule && effectiveHospitalData
-    ? (effectiveHospitalData?.adminCode || effectiveHospitalData?.doctorCode)
-    : (doctorDetails?.doctorCode || doctorDetails?.userId);
-  const finalDesignation = isInHospitalModule && effectiveHospitalData
-    ? (effectiveHospitalData?.medicalPracticeType || (effectiveHospitalData?.isDoctor ? "General Physician" : "Hospital Admin"))
-    : (doctorDetails?.designation || doctorDetails?.specializations?.[0]);
-  const finalEducation = isInHospitalModule && effectiveHospitalData
-    ? formatHospitalEducation(effectiveHospitalData?.education)
-    : (doctorDetails?.education?.join(" - ") || "—");
-  const finalLoading = isInHospitalModule
-    ? !effectiveHospitalData
-    : doctorLoading;
 
   return (
     <div className="w-full h-12 border-b-[0.5px] border-secondary-grey100/50 flex items-center py-2 px-4 gap-3">
@@ -427,12 +249,21 @@ const DocNavbar = ({
 
       {/* Center: Search (right-aligned, fixed width) */}
       <div className="ml-auto">
-        <SearchInput ref={searchRef} placeholder="Search Patients" showCtrlK />
+        <SearchInput
+          ref={searchRef}
+          placeholder="Search Patients"
+          showCtrlK
+          readOnly
+          onClick={() => setShowGlobalSearch(true)}
+          onFocus={() => setShowGlobalSearch(true)}
+        />
       </div>
       <Partition />
 
       {/* Right: Actions */}
       <div className="flex items-center gap-2">
+        {/* ... (Module Switcher, Add New, Notifications, Profile) ... */}
+        {/* All existing right side content remains here */}
         {/* Module Switcher (Hospital Admin <-> Doctor) */}
         {finalSwitcher && (
           <>
@@ -745,6 +576,10 @@ const DocNavbar = ({
         onClose={() => setShowOutOfOfficeDrawer(false)}
         onSave={handleOOOSave}
         initialData={oooData}
+      />
+      <GlobalSearch
+        isOpen={showGlobalSearch}
+        onClose={() => setShowGlobalSearch(false)}
       />
     </div>
   );
