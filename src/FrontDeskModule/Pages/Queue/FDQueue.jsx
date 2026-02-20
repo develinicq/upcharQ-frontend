@@ -243,9 +243,7 @@ export default function FDQueue() {
 		try {
 			const res = await axiosInstance.get(`/eta/slot/${selectedSlotId}/status`);
 			if (res.data?.success) {
-				console.log("Full Poll Response:", res.data);
 				const { slotStatus, currentToken, pauseDurationMinutes, pauseStartedAt, activePatientDetails } = res.data.message || {};
-				console.log("Extracted activePatientDetails:", activePatientDetails);
 
 				// Map backend status to frontend state
 				if (slotStatus === 'CREATED') {
@@ -278,7 +276,6 @@ export default function FDQueue() {
 				}
 
 				if (activePatientDetails) {
-					console.log("Setting polled patient:", activePatientDetails);
 					const p = activePatientDetails;
 					setPolledActivePatient({
 						patientName: `${p.firstName} ${p.lastName}`.trim(),
@@ -291,7 +288,6 @@ export default function FDQueue() {
 						startedAt: p.startedAt // Sync session timer
 					});
 				} else {
-					console.log("No active patient details in poll");
 					setPolledActivePatient(null);
 				}
 			}

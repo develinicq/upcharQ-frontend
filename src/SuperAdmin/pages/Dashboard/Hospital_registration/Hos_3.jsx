@@ -16,6 +16,7 @@ import { useRegistration } from '../../../../SuperAdmin/context/RegistrationCont
 import { Checkbox } from '../../../../components/ui/checkbox'; // Added UI Checkbox import
 import useToastStore from '../../../../store/useToastStore';
 import TimeInput from '../../../../components/FormItems/TimeInput';
+import { State, City } from 'country-state-city';
 
 function Hos3Inner(props, ref) {
   const store = useHospitalRegistrationStore();
@@ -105,7 +106,7 @@ function Hos3Inner(props, ref) {
         if (value && Number(value) < 0) return 'Cannot be negative';
         return '';
       case 'url':
-        if (!value) return 'Required';
+        if (!value) return '';
         if (!/^(https?:\/\/)?[a-zA-Z0-9.-]+$/.test(value)) return 'Invalid URL format';
         return '';
       case 'website':
@@ -130,21 +131,32 @@ function Hos3Inner(props, ref) {
     return { value: String(y), label: String(y) };
   });
 
-  const cityOptions = [
-    { value: "Akola", label: "Akola" },
-    { value: "Mumbai", label: "Mumbai" },
-    { value: "Delhi", label: "Delhi" },
-    { value: "Bangalore", label: "Bangalore" },
-    { value: "Chennai", label: "Chennai" }
-  ];
 
-  const stateOptions = [
-    { value: "Maharashtra", label: "Maharashtra" },
-    { value: "Delhi", label: "Delhi" },
-    { value: "Karnataka", label: "Karnataka" },
-    { value: "Tamil Nadu", label: "Tamil Nadu" },
-    { value: "Gujarat", label: "Gujarat" }
-  ];
+
+  // State options derived from country-state-city
+  const allStates = State.getStatesOfCountry('IN');
+  const stateOptions = allStates.map(s => ({ value: s.name, label: s.name, isoCode: s.isoCode }));
+
+  // Helper to filter states
+  const getFilteredStates = (query) => {
+    if (!query) return stateOptions;
+    const lower = query.toLowerCase();
+    return stateOptions.filter(s => s.label.toLowerCase().includes(lower));
+  };
+
+  // City options derived from selected state
+  const selectedStateObj = allStates.find(s => s.name === state);
+  const selectedStateCode = selectedStateObj ? selectedStateObj.isoCode : null;
+
+  const allCities = selectedStateCode ? City.getCitiesOfState('IN', selectedStateCode) : [];
+  const cityOptions = allCities.map(c => ({ value: c.name, label: c.name }));
+
+  // Helper to filter cities
+  const getFilteredCities = (query) => {
+    if (!query) return cityOptions;
+    const lower = query.toLowerCase();
+    return cityOptions.filter(c => c.label.toLowerCase().includes(lower));
+  };
 
   // Page 2 Data Lists
   const specialtiesList = [
@@ -169,6 +181,19 @@ function Hos3Inner(props, ref) {
   ];
 
 
+
+  const toggleSelectAll = (field, list) => {
+    const current = Array.isArray(store[field]) ? store[field] : [];
+    const isAllSelected = list.every(item => current.includes(item));
+    setField(field, isAllSelected ? [] : [...list]);
+  };
+
+  const toggleAllDays = () => {
+    const currentSchedule = store.schedule || [];
+    const isAllSelected = currentSchedule.every(d => d.available);
+    const newSchedule = currentSchedule.map(d => ({ ...d, available: !isAllSelected }));
+    setField('schedule', newSchedule);
+  };
 
   const toggleSelection = (field, item) => {
     const current = Array.isArray(store[field]) ? store[field] : [];
@@ -406,13 +431,14 @@ function Hos3Inner(props, ref) {
               requiredDot
               infoIcon
               value={city}
-              placeholder="Select City"
+              placeholder={selectedStateCode ? "Select or Type City" : "Select State First"}
+              onChange={(v) => updateField('city', v)}
               RightIcon={ChevronDown}
-              readonlyWhenIcon
+              readonlyWhenIcon={false}
               onIconClick={() => toggleDropdown('city')}
               dropdownOpen={openDropdowns['city']}
               onRequestClose={() => closeDropdown('city')}
-              dropdownItems={cityOptions}
+              dropdownItems={getFilteredCities(city)}
               onSelectItem={(item) => {
                 updateField('city', item.value);
                 closeDropdown('city');
@@ -426,15 +452,18 @@ function Hos3Inner(props, ref) {
               requiredDot
               infoIcon
               value={state}
-              placeholder="Select State"
+              placeholder="Select or Type State"
+              onChange={(v) => updateField('state', v)}
               RightIcon={ChevronDown}
-              readonlyWhenIcon
+              readonlyWhenIcon={false}
               onIconClick={() => toggleDropdown('state')}
               dropdownOpen={openDropdowns['state']}
               onRequestClose={() => closeDropdown('state')}
-              dropdownItems={stateOptions}
+              dropdownItems={getFilteredStates(state)}
               onSelectItem={(item) => {
                 updateField('state', item.value);
+                // Clear city when state changes
+                updateField('city', '');
                 closeDropdown('state');
               }}
             />
@@ -454,8 +483,7 @@ function Hos3Inner(props, ref) {
             <InputWithMeta
               label="Hospital URL"
               infoIcon
-              requiredDot
-              inputRightMeta=".eclinicq.com"
+              prefix="upcharq.com/"
               placeholder="Enter Hospital User Name"
               value={url}
               onChange={(val) => updateField('url', val)}
@@ -464,7 +492,7 @@ function Hos3Inner(props, ref) {
           </div>
           <div className="w-full">
             <CustomUpload
-              label="Upload Company Logo"
+              label="Upload Hospital Logo"
               compulsory={false}
               infoIcon
               uploadContent="Upload File"
@@ -478,7 +506,7 @@ function Hos3Inner(props, ref) {
         <FormFieldRow>
           <div className="w-full">
             <CustomUpload
-              label="Upload Hospital Image"
+              label="Upload Hospital Cover Image"
               compulsory={true}
               uploadContent="Upload File"
               meta="Support Size upto 2MB in .png, .jpg, .svg, .webp"
@@ -552,6 +580,11 @@ function Hos3Inner(props, ref) {
           subtitle="Select the medical specialties available at your hospital"
         />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-3 gap-x-4 border border-secondary-grey100 rounded-lg p-3">
+          <LabeledCheckbox
+            label="Select All"
+            checked={specialtiesList.every(i => (medicalSpecialties || []).includes(i))}
+            onChange={() => toggleSelectAll('medicalSpecialties', specialtiesList)}
+          />
           {specialtiesList.map(item => (
             <LabeledCheckbox
               key={item}
@@ -573,6 +606,11 @@ function Hos3Inner(props, ref) {
           subtitle="Select the services provided by your hospital"
         />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-3 gap-x-4 border border-secondary-grey100 rounded-lg p-3">
+          <LabeledCheckbox
+            label="Select All"
+            checked={servicesList.every(i => (hospitalServices || []).includes(i))}
+            onChange={() => toggleSelectAll('hospitalServices', servicesList)}
+          />
           {servicesList.map(item => (
             <LabeledCheckbox
               key={item}
@@ -607,10 +645,17 @@ function Hos3Inner(props, ref) {
 
       {/* Operating Hours */}
       <div className="space-y-4">
-        <SectionHeading
-          title="Operating Hours"
-          subtitle="Select the days and times your hospital is open"
-        />
+        <div className="flex justify-between items-start">
+          <SectionHeading
+            title="Operating Hours"
+            subtitle="Select the days and times your hospital is open"
+          />
+          <LabeledCheckbox
+            label="Select All Days"
+            checked={(store.schedule || []).every(d => d.available)}
+            onChange={toggleAllDays}
+          />
+        </div>
         <div className="flex flex-col gap-4 ">
           {(store.schedule || []).map((dayData, index) => {
             const { day, available, is24Hours, sessions } = dayData;

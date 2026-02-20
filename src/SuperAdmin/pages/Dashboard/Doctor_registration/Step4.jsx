@@ -6,6 +6,8 @@ import useDoctorStep1Store from '../../../../store/useDoctorStep1Store';
 import useDoctorRegistrationStore from '../../../../store/useDoctorRegistrationStore';
 import { getDoctorReviewDetails } from '../../../../services/doctorService';
 import UniversalLoader from '../../../../components/UniversalLoader';
+import useSuperAdminListStore from '../../../../store/useSuperAdminListStore';
+
 const review = '/review.png'
 const verified2 = '/verified-tick.svg'
 const right = '/angel_right_blue.png'
@@ -18,6 +20,14 @@ const Step4 = () => {
 
   const [loading, setLoading] = useState(true);
   const [reviewData, setReviewData] = useState(null);
+  const { doctorsRaw, fetchDoctors, doctorsFetched } = useSuperAdminListStore();
+
+  useEffect(() => {
+    if (!doctorsFetched) {
+      fetchDoctors();
+    }
+  }, [doctorsFetched, fetchDoctors]);
+
 
   const currentSubStep = formData.step4SubStep || 1;
 
@@ -33,6 +43,8 @@ const Step4 = () => {
       try {
         setLoading(true);
         const res = await getDoctorReviewDetails(docId);
+        // const res = { success: true, data: { doctorDetails: {}, professionalDetails: {}, clinicalInformation: {} } };
+
         if (ignore) return;
         if (res.success && res.data) {
           setReviewData(res.data);
@@ -88,7 +100,10 @@ const Step4 = () => {
 
   const doctorData = {
     doctorName: orDash(realDoctorName),
+    doctorId: orDash(reviewData?.doctorDetails?.docId || reg?.displayId || (doctorsRaw.length + 1)),
     gender: orDash(dDetails.gender || step1?.gender),
+
+
     // Handle userRole: default to 'Doctor' if not found, but avoid hardcoded 'Super Admin/Doctor' as primary if empty
     userRole: orDash(Array.isArray(dDetails.roles) ? dDetails.roles.join(', ') : (step1?.role ? (step1.role === 'doctor' ? 'Doctor' : step1.role) : '—')),
     personalEmail: orDash(dDetails.personalEmail || step1?.emailId),
@@ -218,7 +233,7 @@ const Step4 = () => {
   const renderPage1 = () => {
     if (loading) {
       return <div className="flex items-center justify-center h-[24px]
-       "><UniversalLoader size={32}  /></div>;
+       "><UniversalLoader size={32} /></div>;
     }
     return (
       <div className="max-w-[700px] mx-auto flex flex-col gap-4">
@@ -233,6 +248,7 @@ const Step4 = () => {
         <SectionBox title="Doctor Details">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
             <div className='flex flex-col '>
+              <DetailRow label="Doctor ID" value={doctorData.doctorId} />
               <DetailRow label="Doctor Name" value={doctorData.doctorName} />
               <DetailRow label="Gender" value={doctorData.gender} />
               <DetailRow label="User Role" value={doctorData.userRole} />
@@ -317,13 +333,12 @@ const Step4 = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 ">
             <div className="flex flex-col ">
               <DetailRow label="Clinic Name" value={doctorData.clinicName} />
-              <DetailRow label="Hospital Type" value={doctorData.hospitalType} />
               <DetailRow label="Address" value={doctorData.address} alignItems="items-start" className="h-auto" />
             </div>
             <div className="flex flex-col ">
               <DetailRow label="Clinic Email" value={doctorData.clinicEmail} type="done" />
               <DetailRow label="Clinic Contact" value={doctorData.clinicContact} type="done" />
-              <DetailRow label="e-clinic ID" value={doctorData.eClinicId} />
+              <DetailRow label="UpcharQ ID" value={doctorData.eClinicId} />
             </div>
           </div>
         </SectionBox>
@@ -372,20 +387,7 @@ const Step4 = () => {
           confirmText="I understand and will comply with the Data Privacy Agreement"
         />
 
-        <div className="flex justify-between items-center">
-          <div className="flex  flex-col">
-            <div className='flex gap-1 items-center'>
-              <h3 className="text-sm font-semibold text-secondary-grey400">Digital Signature</h3>
-              <div className='w-1 h-1 bg-error-400 rounded-full'></div>
-            </div>
-            <p className="text-secondary-grey300 text-xs mb-4">Sign digitally using Aadhar eSign and Upload Pan card</p>
-          </div>
 
-          <div className="flex gap-4 items-center">
-            <ActionButton variant="pancard" className='h-8'>Use Aadhar eSign</ActionButton>
-            <ActionButton variant="pancard" className='h-8'>Upload Pancard</ActionButton>
-          </div>
-        </div>
       </div>
     </div>
   );

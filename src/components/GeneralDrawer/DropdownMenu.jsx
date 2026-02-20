@@ -9,6 +9,7 @@ const DropdownMenu = ({
   maxHeight = "300px",
   className = "",
   itemRenderer,
+  itemClassName = "mb-1"
 }) => {
   return (
     <div
@@ -26,11 +27,10 @@ const DropdownMenu = ({
               key={val ?? idx}
               type="button"
               onClick={() => onSelect(m)}
-              className={`w-full h-[32px] px-2 flex-shrink-0 mb-1 last:mb-0 rounded-md text-left text-secondary-grey400 transition-all flex items-center justify-between leading-none box-border ${
-                isSelected
+              className={`w-full h-[32px] px-2 flex-shrink-0 ${itemClassName} last:mb-0 rounded-md text-left text-secondary-grey400 transition-all flex items-center justify-between leading-none box-border ${isSelected
                   ? "bg-blue-primary50 border border-blue-primary150"
                   : "hover:bg-secondary-grey50"
-              }`}
+                }`}
               role="option"
             >
               <span className="text-sm">

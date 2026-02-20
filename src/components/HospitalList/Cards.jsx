@@ -15,6 +15,8 @@ import {
   Trash2
 } from "lucide-react";
 import { getPublicUrl } from "../../services/uploadsService";
+import { deleteHospitalProfile } from "../../services/hospitalService";
+import useSuperAdminListStore from "../../store/useSuperAdminListStore";
 import AvatarCircle from "../AvatarCircle";
 import Badge from "../Badge";
 
@@ -39,6 +41,7 @@ const Cards = ({ hospital }) => {
   const [position, setPosition] = useState({ bottom: 0, left: 0 });
   const menuRef = useRef(null);
   const buttonRef = useRef(null);
+  const fetchHospitals = useSuperAdminListStore((state) => state.fetchHospitals);
 
   useEffect(() => {
     let ignore = false;
@@ -103,10 +106,35 @@ const Cards = ({ hospital }) => {
     setIsOpen(!isOpen);
   };
 
-  const handleAction = (actionName, e) => {
+  const handleAction = async (actionName, e) => {
     e.stopPropagation();
-    console.log(`Action: ${actionName}`, hospital);
     setIsOpen(false);
+
+    if (actionName === 'Delete Profile') {
+      const confirmDelete = window.confirm(
+        `Are you sure you want to permanently delete the profile for ${hospital.name}? This action cannot be undone.`
+      );
+      if (!confirmDelete) return;
+
+      try {
+        // Use hospital.temp (which is the actual ID from HospitalList mapping)
+        // or hospital.id if temp is missing. In HospitalList, temp is h.id.
+        const hospitalId = hospital.temp || hospital.id;
+
+        await deleteHospitalProfile(hospitalId);
+        alert('Hospital profile deleted successfully.');
+        // Refresh the list
+        if (fetchHospitals) {
+          fetchHospitals();
+        } else {
+          window.location.reload();
+        }
+      } catch (error) {
+        console.error("Delete failed:", error);
+        alert(`Failed to delete profile: ${error.message || 'Unknown error'}`);
+      }
+    } else {
+    }
   };
 
   const openHospital = () => {
@@ -120,7 +148,7 @@ const Cards = ({ hospital }) => {
   return (
     <div
       onClick={openHospital}
-      className="group relative pb-3 flex flex-col w-full min-w-[300px] bg-white rounded-md border border-secondary-grey100 transition-all duration-300 hover:shadow-[0_0_11.4px_4px_rgba(35,114,236,0.15)] overflow-hidden cursor-pointer"
+      className="group relative pb-[12px] flex flex-col w-[359.5px] h-[366px] min-w-[300px] bg-white rounded-[8px] border-[0.5px] border-secondary-grey100 transition-all duration-300 hover:shadow-[0_0_11.4px_4px_rgba(35,114,236,0.15)] overflow-hidden cursor-pointer"
     >
       {/* Header / Banner Section */}
       <div className="relative h-[120px] w-full">
@@ -163,61 +191,62 @@ const Cards = ({ hospital }) => {
       </div>
 
       {/* Content Section */}
-      <div className="px-3 flex flex-col gap-1">
+      {/* Content Section */}
+      <div className="px-3 flex flex-col gap-1 flex-1">
         {/* Name & Type */}
 
-        <span className="text-[16px] font-semibold text-secondary-grey400">{hospital.name || "Hospital Name"}</span>
-        <p className="text-sm text-secondary-grey400 ">
+        <span className="text-[15px] font-semibold text-secondary-grey400 leading-tight">{hospital.name || "Hospital Name"}</span>
+        <p className="text-[11px] text-secondary-grey400 leading-tight">
           {hospital.type || "Multi-speciality"} | {hospital.doctors || "10+"} Doctors | {hospital.beds || "250"}
         </p>
-        <div className="flex items-center gap-2 text-sm text-secondary-grey400">
+        <div className="flex items-center gap-2 text-[11px] text-secondary-grey400">
           <span>Est in {hospital.estYear || "2010"}</span>
-          <span className="w-[6px] h-[6px] rounded-full bg-secondary-grey200"></span>
+          <span className="w-[3px] h-[3px] rounded-full bg-secondary-grey200"></span>
           <span>{hospital.validity || "15/01/2025"}</span>
         </div>
 
         <div className="flex items-center gap-2">
-          <img src={user} alt="" className="h-4 ml-0.5" />
-          <span className="text-sm text-secondary-grey400 truncate">{hospital.id || "HO-0268790"}</span>
+          <img src={user} alt="" className="h-3 ml-0.5" />
+          <span className="text-[11px] text-secondary-grey400 truncate">{hospital.id || "HO-0268790"}</span>
         </div>
         <div className="flex items-center gap-2">
-          <img src={location} alt="" className="h-5" />
-          <span className="text-sm text-secondary-grey400 leading-tight line-clamp-2">
+          <img src={location} alt="" className="h-3.5" />
+          <span className="text-[11px] text-secondary-grey400 leading-tight line-clamp-1">
             {hospital.address || "Jawahar Nagar, Akola(MH) - 444001"}
           </span>
         </div>
+
         <div className="flex items-center gap-2">
-          <img src={mail} alt="" className="h-5" />
-          <span className="text-sm text-secondary-grey400 ">{hospital.email || "manipal@gmail.com"}</span>
+          <img src={mail} alt="" className="h-3" />
+          <span className="text-[11px] text-secondary-grey400 truncate">{hospital.email || "manipal@gmail.com"}</span>
         </div>
         <div className="flex items-center gap-2">
-          <img src={phone} alt="" className="h-5" />
-          <span className="text-sm text-secondary-grey400 ">{hospital.phone || "+91 9175367487"}</span>
+          <img src={phone} alt="" className="h-3" />
+          <span className="text-[11px] text-secondary-grey400 truncate">{hospital.phone || "+91 9175367487"}</span>
         </div>
 
-        <div className="flex items-center gap-2 text-sm text-secondary-grey400">
+        <div className="flex items-center gap-2 text-[11px] text-secondary-grey400">
           <span>Start Date: {hospital.startDate || "15/01/2025"}</span>
-          <span className="w-[6px] h-[6px] rounded-full bg-secondary-grey200"></span>
-          <span>Plan: </span><span className="text-blue-500 bg-blue-50 px-1 rounded">{hospital.plan || "Basic"}</span>
+          <span className="w-[3px] h-[3px] rounded-full bg-secondary-grey200"></span>
+          <span>Plan: </span><span className="text-blue-500 bg-blue-50 px-1 rounded text-[10px]">{hospital.plan || "Basic"}</span>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex mt-2 gap-3 items-center ">
+        <div className="flex mt-auto gap-2 items-center ">
           <button
-
-            className="flex-1 h-9 bg-blue-primary250 hover:bg-blue-600 rounded-md flex items-center justify-center gap-2 text-white text-sm font-medium transition-colors shadow-[2px_2px_10px_0px_rgba(35,114,236,0.3)]"
+            className="flex-1 h-8 bg-blue-primary250 hover:bg-blue-600 rounded-md flex items-center justify-center gap-2 text-white text-[11px] font-medium transition-colors shadow-[2px_2px_10px_0px_rgba(35,114,236,0.3)]"
           >
             View Details
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
-          <div className='h-5 border-l border-secondary-grey100/50 ml-2 p-1 '></div>
+          <div className='h-5 border-l border-secondary-grey100/50 ml-1 p-1 '></div>
 
           <button
             ref={buttonRef}
             onClick={toggleMenu}
-            className={`hover:bg-secondary-grey50 rounded-sm h-8 w-8 flex items-center justify-center mr-1 transition-all ${isOpen ? 'bg-secondary-grey50' : ''}`}
+            className={`hover:bg-secondary-grey50 rounded-sm h-8 w-8 flex items-center justify-center mr-0.5 transition-all ${isOpen ? 'bg-secondary-grey50' : ''}`}
           >
-            <img src={action} alt="" className="h-[5px] w-auto" />
+            <img src={action} alt="" className="h-[4px] w-auto" />
           </button>
 
           {isOpen && createPortal(

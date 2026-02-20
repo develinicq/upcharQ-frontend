@@ -3,6 +3,7 @@ import Info from "../../../SuperAdmin/pages/Doctors/DoctorList/DoctorInfo/Sectio
 import Clinical from "../../../SuperAdmin/pages/Doctors/DoctorList/DoctorInfo/Sections/Clinical";
 import Consultation from "../../../SuperAdmin/pages/Doctors/DoctorList/DoctorInfo/Sections/Consultation";
 import Staff from "../../../SuperAdmin/pages/Doctors/DoctorList/DoctorInfo/Sections/Staff";
+import Billing from "../../../SuperAdmin/pages/Doctors/DoctorList/DoctorInfo/Sections/Billing";
 import UniversalLoader from "@/components/UniversalLoader";
 
 const PageNav = ({ doctor, selectedClinicId }) => {
@@ -44,7 +45,6 @@ const PageNav = ({ doctor, selectedClinicId }) => {
           />
         );
       case "consultation":
-        console.log('[PageNav] Consultation tab active. Rendering Consultation component.');
         return (
           <Consultation
             doctor={doctor}
@@ -62,8 +62,7 @@ const PageNav = ({ doctor, selectedClinicId }) => {
         // No universal loader for staff for now
         return <Staff doctor={doctor} />;
       case "billing":
-        // No universal loader for billing for now
-        return <div className="p-4 text-gray-500">Billing & Subscription (Coming Soon)</div>;
+        return <Billing doctor={doctor} />;
       default:
         return null;
     }
@@ -80,7 +79,6 @@ const PageNav = ({ doctor, selectedClinicId }) => {
               <button
                 key={t.key}
                 onClick={() => {
-                  console.log('[PageNav] Tab clicked:', t.key);
                   setActiveTab(t.key);
                   // show loader only for tabs that fetch and report loading
                   if (t.key === 'personal') {

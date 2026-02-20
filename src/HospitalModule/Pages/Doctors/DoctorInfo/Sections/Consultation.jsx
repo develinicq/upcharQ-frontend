@@ -691,6 +691,29 @@ const Consultation = ({ doctor, isEditMode, setIsEditMode }) => {
                                                     type="checkbox"
                                                     disabled={!d.available}
                                                     className="w-4 h-4 cursor-pointer"
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setConsultationDetails((prev) => {
+                                                                const next = hydrateState(prev);
+                                                                const currentDay = next.slotTemplates.schedule.find(x => x.day === d.day || String(x.day).toUpperCase() === String(d.day).toUpperCase());
+                                                                if (!currentDay) return next;
+
+                                                                const sourceSessions = JSON.parse(JSON.stringify(currentDay.sessions || []));
+                                                                const cleanedSessions = sourceSessions.map(s => ({ ...s, id: undefined }));
+
+                                                                next.slotTemplates.schedule.forEach(day => {
+                                                                    if (day.day !== d.day) {
+                                                                        day.available = currentDay.available;
+                                                                        day.sessions = JSON.parse(JSON.stringify(cleanedSessions));
+                                                                    }
+                                                                });
+                                                                return next;
+                                                            });
+                                                            setConsultationDirty(true);
+                                                            e.target.checked = false;
+                                                            addToast({ title: "Applied", message: `Schedule for ${d.day} applied to all days.`, type: "success" });
+                                                        }
+                                                    }}
                                                 />
 
                                                 <span>Apply to All Days</span>

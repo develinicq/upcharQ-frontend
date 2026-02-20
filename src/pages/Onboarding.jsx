@@ -1,30 +1,46 @@
+import axios from "../lib/axios";
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
-const Onboarding = () => {
+const Onboarding = ({ onContinue }) => {
   const [searchParams] = useSearchParams();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    // If OnboardingFlow already handled the logic, we might just be viewing success/details
+    // But Onboarding seems designed to fetch itself if rendered standalone.
+
+    // Check if onContinue prop is passed (implies parent control)
+    if (onContinue) {
+      // If parent passed onContinue, it likely expects to control flow, 
+      // but here we are in "fallback" mode if parent rendered us without data?
+      // Or maybe parent rendered us FOR gathering data?
+      // Let's keep fetching but use cleaner axios.
+    }
+
     const code = searchParams.get("code");
     if (!code) {
       setError("No invitation code provided.");
       setLoading(false);
       return;
     }
-    fetch(`/api/invitations/checkInvitation?code=${code}`)
-      .then((res) => res.json())
-      .then((result) => {
+
+    axios.get(`/invitations/checkInvitation`, { params: { code } })
+      .then((response) => {
+        const result = response.data;
         if (result.success) {
           setData(result.data);
+          // If parent provided onContinue callback, use it?
+          // onContinue(result.data); 
         } else {
           setError(result.message || "Invalid invitation.");
         }
         setLoading(false);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("Onboarding fetch error:", err);
         setError("Failed to fetch invitation details.");
         setLoading(false);
       });

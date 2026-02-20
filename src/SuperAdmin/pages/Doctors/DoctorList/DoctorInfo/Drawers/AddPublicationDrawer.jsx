@@ -18,7 +18,6 @@ import { addDoctorPublicationForSuperAdmin, updateDoctorPublicationForSuperAdmin
  */
 export default function AddPublicationDrawer({ open, onClose, onSave, mode = "add", initial = {}, doctorId }) {
   useEffect(() => {
-    console.log("[AddPublicationDrawer] open prop:", open);
   }, [open]);
   const [title, setTitle] = useState("");
   const [publisher, setPublisher] = useState("");
@@ -47,7 +46,6 @@ export default function AddPublicationDrawer({ open, onClose, onSave, mode = "ad
 
   useEffect(() => {
     if (!open) return;
-  console.log("[AddPublicationDrawer] initializing with initial:", initial);
     setTitle(initial?.title || "");
     setPublisher(initial?.publisher || "");
     setDate(initial?.date || (initial?.publicationDate ? initial.publicationDate.split("T")[0] : ""));

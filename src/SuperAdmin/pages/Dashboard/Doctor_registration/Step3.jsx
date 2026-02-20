@@ -8,10 +8,12 @@ import {
 import InputWithMeta from '../../../../components/GeneralDrawer/InputWithMeta';
 import useDoctorRegistrationStore from '../../../../store/useDoctorRegistrationStore';
 import CustomUpload from '../../../../components/CustomUpload';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Search } from 'lucide-react';
 import RadioButton from '../../../../components/GeneralDrawer/RadioButton';
 import { setupClinic } from '../../../../services/doctorService';
+
 import useToastStore from '../../../../store/useToastStore';
+import { State, City } from 'country-state-city';
 const upload = '/upload_blue.png'
 
 
@@ -28,6 +30,32 @@ const Step3 = forwardRef((props, ref) => {
 
   const [formErrors, setFormErrors] = React.useState({});
   const [openDropdowns, setOpenDropdowns] = useState({});
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Function to search location using OSM Nominatim
+  const handleLocationSearch = async () => {
+    if (!searchQuery.trim()) return;
+    setIsSearching(true);
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`);
+      const data = await response.json();
+      if (data && data.length > 0) {
+        const { lat, lon } = data[0];
+        setClinicField('latitude', parseFloat(lat));
+        setClinicField('longitude', parseFloat(lon));
+        setFormErrors(prev => ({ ...prev, mapLocation: "" }));
+        addToast({ title: 'Location Found', message: `Moved map to ${data[0].display_name}`, type: 'success' });
+      } else {
+        addToast({ title: 'Not Found', message: 'Location not found', type: 'error' });
+      }
+    } catch (error) {
+      console.error("Search error:", error);
+      addToast({ title: 'Error', message: 'Failed to search location', type: 'error' });
+    } finally {
+      setIsSearching(false);
+    }
+  };
 
   const toggleDropdown = (key) => {
     setOpenDropdowns(prev => ({ ...prev, [key]: !prev[key] }));
@@ -146,6 +174,7 @@ const Step3 = forwardRef((props, ref) => {
       };
 
       const res = await setupClinic(payload);
+      // const res = { success: true, message: "Mock Success" };
       if (res.success) {
         addToast({ title: 'Success', message: 'Clinic setup successful', type: 'success' });
         return true;
@@ -174,23 +203,32 @@ const Step3 = forwardRef((props, ref) => {
     }));
   };
 
-  // City options
-  const cityOptions = [
-    { value: "Akola", label: "Akola" },
-    { value: "Mumbai", label: "Mumbai" },
-    { value: "Delhi", label: "Delhi" },
-    { value: "Bangalore", label: "Bangalore" },
-    { value: "Chennai", label: "Chennai" }
-  ];
+  // State options derived from country-state-city
+  const allStates = State.getStatesOfCountry('IN');
+  const stateOptions = allStates.map(s => ({ value: s.isoCode, label: s.name }));
 
-  // State options
-  const stateOptions = [
-    { value: "Maharashtra", label: "Maharashtra" },
-    { value: "Delhi", label: "Delhi" },
-    { value: "Karnataka", label: "Karnataka" },
-    { value: "Tamil Nadu", label: "Tamil Nadu" },
-    { value: "Gujarat", label: "Gujarat" }
-  ];
+  // Helper to filter states
+  const getFilteredStates = (query) => {
+    if (!query) return stateOptions;
+    const lower = query.toLowerCase();
+    return stateOptions.filter(s => s.label.toLowerCase().includes(lower));
+  };
+
+
+  // City options derived from selected state
+  // We need to find the isoCode of the currently selected state name to fetch cities
+  const selectedStateObj = allStates.find(s => s.name === clinicData.state);
+  const selectedStateCode = selectedStateObj ? selectedStateObj.isoCode : null;
+
+  const allCities = selectedStateCode ? City.getCitiesOfState('IN', selectedStateCode) : [];
+  const cityOptions = allCities.map(c => ({ value: c.name, label: c.name }));
+
+  // Helper to filter cities
+  const getFilteredCities = (query) => {
+    if (!query) return cityOptions;
+    const lower = query.toLowerCase();
+    return cityOptions.filter(c => c.label.toLowerCase().includes(lower));
+  };
 
   return (
     <div className="flex flex-col h-full bg-white rounded-md shadow-sm overflow-hidden">
@@ -297,15 +335,29 @@ const Step3 = forwardRef((props, ref) => {
                 <h2 className="text-sm font-semibold text-secondary-grey400">Clinic Address</h2>
                 {/* Map Location */}
                 <div className='flex flex-col gap-2'>
+
                   <InputWithMeta
                     label="Map Location"
                     requiredDot
                     infoIcon
-                    placeholder="Search Location"
-                    fileName={clinicData.latitude && clinicData.longitude ? `${clinicData.latitude}, ${clinicData.longitude}` : ""}
+                    value={searchQuery}
+                    onChange={(val) => setSearchQuery(val)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleLocationSearch();
+                      }
+                    }}
+                    placeholder="Search Location (e.g. Mumbai, Hospital Name)"
+                    RightIcon={Search}
+                    onIconClick={handleLocationSearch}
+                    readonlyWhenIcon={false}
+                    disabled={isSearching}
                   />
                   <MapLocation
-                    heightClass="h-[100px]"
+                    key={`${clinicData.latitude}-${clinicData.longitude}`}
+                    heightClass="h-[300px]"
+                    initialPosition={clinicData.latitude && clinicData.longitude ? [parseFloat(clinicData.latitude), parseFloat(clinicData.longitude)] : null}
                     onChange={({ lat, lng }) => {
                       setClinicField('latitude', lat);
                       setClinicField('longitude', lng);
@@ -362,7 +414,51 @@ const Step3 = forwardRef((props, ref) => {
                       requiredDot
                       infoIcon
                       value={clinicData.pincode}
-                      onChange={(val) => handleInputChange({ target: { name: 'pincode', value: val } })}
+                      onChange={(val) => {
+                        handleInputChange({ target: { name: 'pincode', value: val } });
+                        if (val.length === 6) {
+                          // Fetch Logic
+                          fetch(`https://api.postalpincode.in/pincode/${val}`)
+                            .then(res => res.json())
+                            .then(data => {
+                              if (data && data[0].Status === "Success") {
+                                const postOffice = data[0].PostOffice[0];
+                                const stateName = postOffice.State;
+                                const district = postOffice.District || postOffice.Region || postOffice.Block;
+
+                                // Try to match state
+                                const matchedState = allStates.find(s => s.name.toLowerCase() === stateName.toLowerCase()) ||
+                                  allStates.find(s => stateName.toLowerCase().includes(s.name.toLowerCase()));
+
+                                if (matchedState) {
+                                  handleInputChange({ target: { name: 'state', value: matchedState.name } });
+                                  // Try to match city/district
+                                  // We need to wait for state update or use logic directly? 
+                                  // Since we just set state, we can try to set city directly if we don't rely on derived 'cityOptions' for the value itself, just for dropdown validation
+                                  handleInputChange({ target: { name: 'city', value: district } });
+
+                                  // Construct search query for map
+                                  const locQuery = `${district}, ${matchedState.name}`;
+                                  setSearchQuery(locQuery);
+                                  // Trigger map search automatically
+                                  setIsSearching(true);
+                                  fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locQuery)}`)
+                                    .then(r => r.json())
+                                    .then(d => {
+                                      if (d && d.length > 0) {
+                                        setClinicField('latitude', parseFloat(d[0].lat));
+                                        setClinicField('longitude', parseFloat(d[0].lon));
+                                        addToast({ title: 'Location Updated', message: `Map moved to ${district}`, type: 'success' });
+                                      }
+                                    }).finally(() => setIsSearching(false));
+                                }
+                              } else {
+                                addToast({ title: 'Invalid Pincode', message: 'Could not fetch details', type: 'error' });
+                              }
+                            })
+                            .catch(err => console.error(err));
+                        }
+                      }}
                       placeholder="Enter Pincode"
                       {...commonFieldProps}
                     />
@@ -374,17 +470,46 @@ const Step3 = forwardRef((props, ref) => {
                 <FormFieldRow>
                   <div className="w-full">
                     <InputWithMeta
+                      label="State"
+                      requiredDot
+                      infoIcon
+                      value={clinicData.state}
+                      onChange={(val) => handleInputChange({ target: { name: 'state', value: val } })}
+                      placeholder="Select or Type State"
+                      RightIcon={ChevronDown}
+                      readonlyWhenIcon={false}
+                      closeOnReclick={false}
+                      onIconClick={() => toggleDropdown('state')}
+                      dropdownOpen={openDropdowns['state']}
+                      onRequestClose={() => closeDropdown('state')}
+                      dropdownItems={getFilteredStates(clinicData.state)}
+                      onSelectItem={(item) => {
+                        handleInputChange({ target: { name: 'state', value: item.label } });
+                        // Clear city when state changes
+                        handleInputChange({ target: { name: 'city', value: '' } });
+                        closeDropdown('state');
+                      }}
+                      {...commonFieldProps}
+                    />
+                    {formErrors.state && <span className="text-red-500 text-xs">{formErrors.state}</span>}
+                  </div>
+
+                  <div className="w-full">
+                    <InputWithMeta
                       label="City"
                       requiredDot
                       infoIcon
                       value={clinicData.city}
-                      placeholder="Select City"
+                      onChange={(val) => handleInputChange({ target: { name: 'city', value: val } })}
+                      placeholder={selectedStateCode ? "Select or Type City" : "Select State First"}
                       RightIcon={ChevronDown}
-                      readonlyWhenIcon={true}
+                      readonlyWhenIcon={false}
+                      closeOnReclick={false}
+                      disabled={!selectedStateCode}
                       onIconClick={() => toggleDropdown('city')}
                       dropdownOpen={openDropdowns['city']}
                       onRequestClose={() => closeDropdown('city')}
-                      dropdownItems={cityOptions}
+                      dropdownItems={getFilteredCities(clinicData.city)}
                       onSelectItem={(item) => {
                         handleInputChange({ target: { name: 'city', value: item.value } });
                         closeDropdown('city');
@@ -392,27 +517,6 @@ const Step3 = forwardRef((props, ref) => {
                       {...commonFieldProps}
                     />
                     {formErrors.city && <span className="text-red-500 text-xs">{formErrors.city}</span>}
-                  </div>
-                  <div className="w-full">
-                    <InputWithMeta
-                      label="State"
-                      requiredDot
-                      infoIcon
-                      value={clinicData.state}
-                      placeholder="Select State"
-                      RightIcon={ChevronDown}
-                      readonlyWhenIcon={true}
-                      onIconClick={() => toggleDropdown('state')}
-                      dropdownOpen={openDropdowns['state']}
-                      onRequestClose={() => closeDropdown('state')}
-                      dropdownItems={stateOptions}
-                      onSelectItem={(item) => {
-                        handleInputChange({ target: { name: 'state', value: item.value } });
-                        closeDropdown('state');
-                      }}
-                      {...commonFieldProps}
-                    />
-                    {formErrors.state && <span className="text-red-500 text-xs">{formErrors.state}</span>}
                   </div>
                 </FormFieldRow>
               </div>
@@ -422,14 +526,13 @@ const Step3 = forwardRef((props, ref) => {
                 variant="box"
                 compulsory={true}
                 uploadContent="Upload"
-                onUpload={(key) => setField('profilePhotoKey', key)} // Assuming profilePhotoKey is correct field
+                onUpload={(key) => setField('profilePhotoKey', key)}
                 uploadedKey={profilePhotoKey}
                 meta="Support Size upto 1MB in .png, .jpg, .svg, .webp"
               />
 
             </>
           )}
-
 
         </div>
       </div>

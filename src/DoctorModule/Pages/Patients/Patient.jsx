@@ -144,7 +144,7 @@ export default function Patient() {
   // Define columns for patient table view
   const columns = useMemo(
     () => getPatientColumns(
-      (row) => console.log('Open Log', row),
+      (row) => {},
       (row) => {
         setSchedulePatient(row);
         setIsScheduleOpen(true);

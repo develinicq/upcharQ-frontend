@@ -206,7 +206,10 @@ const CustomUpload = ({
                     onFileSelect={(file) => {
                         handleFileChange({ target: { files: [file] } });
                     }}
-                    onFileView={true}
+                    onFileView={() => {
+                        const url = localPreview || previewUrl;
+                        if (url) window.open(url, '_blank');
+                    }}
                     requiredDot={compulsory}
                 />
             </div>
@@ -221,7 +224,7 @@ const CustomUpload = ({
                 infoIcon={noView}
                 requiredDot={compulsory}
             />
-            
+
 
             <div
                 onClick={triggerUpload}

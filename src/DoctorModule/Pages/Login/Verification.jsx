@@ -95,15 +95,21 @@ export default function Verification({ onVerified, invitationId, mobileChallenge
     setSubmitting(true);
 
     // Simulate API delay
+    // In a real implementation, you might want to validate OTPs here via API if step-by-step validation is required.
+    // However, the current backend architecture validates OTPs AND Password in one go at the end.
+    // So we just pass the OTPs up to the parent.
     setTimeout(() => {
       setSubmitting(false);
       // Proceed to next step
       if (onVerified) {
-        onVerified();
+        onVerified({
+          mobileOtp: mobile.join(''),
+          emailOtp: email.join('')
+        });
       } else {
         navigate('/activated');
       }
-    }, 1500);
+    }, 500); // Reduced delay for better UX
   };
 
   const user = userDetails || {};

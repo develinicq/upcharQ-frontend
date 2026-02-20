@@ -1,4 +1,4 @@
-import React, { useState, useRef, useImperativeHandle, forwardRef, useEffect } from "react";
+import React, { useState, useRef, useImperativeHandle, forwardRef } from "react";
 import {
   FormFieldRow,
   RegistrationHeader
@@ -6,14 +6,16 @@ import {
 import useHospitalDoctorDetailsStore from '../../../../store/useHospitalDoctorDetailsStore';
 import useHospitalRegistrationStore from '../../../../store/useHospitalRegistrationStore';
 import InputWithMeta from '../../../../components/GeneralDrawer/InputWithMeta';
-import { ChevronDown, LogOut, ChevronRight } from 'lucide-react';
+import { ChevronDown, Trash2 } from 'lucide-react';
 import RadioButton from '../../../../components/GeneralDrawer/RadioButton';
 import CustomUpload from '../../../../components/CustomUpload';
 import useToastStore from '../../../../store/useToastStore';
 import axios from '../../../../lib/axios';
+import { indianMedicalColleges } from '../../../../utils/indianMedicalColleges';
+
+
 
 const Hos_2 = forwardRef((props, ref) => {
-  const drStore = useHospitalDoctorDetailsStore();
   const {
     userId,
     specialization,
@@ -33,13 +35,15 @@ const Hos_2 = forwardRef((props, ref) => {
     additionalPractices,
     addPractice,
     updatePractice,
-  } = drStore;
-
+    removePractice,
+  } = useHospitalDoctorDetailsStore();
   const addToast = useToastStore((state) => state.addToast);
+
   const getDoc = (no) => documents?.find(d => d.no === no);
 
   const [formErrors, setFormErrors] = React.useState({});
   const [openDropdowns, setOpenDropdowns] = useState({});
+  const [manualEntry, setManualEntry] = useState({ grad: false, pg: false, spec: false });
 
   const toggleDropdown = (key) => {
     setOpenDropdowns(prev => ({ ...prev, [key]: !prev[key] }));
@@ -95,6 +99,7 @@ const Hos_2 = forwardRef((props, ref) => {
     }));
   };
 
+  // Validate all fields before submit (if submit button is added)
   const validateAll = () => {
     const fieldsToValidate = {
       medicalCouncilRegNo,
@@ -107,6 +112,7 @@ const Hos_2 = forwardRef((props, ref) => {
       experienceYears
     };
 
+    // If PG is selected, add those fields
     if (pgMedicalDegreeType !== null) {
       fieldsToValidate.pgMedicalDegreeType = pgMedicalDegreeType;
       fieldsToValidate.pgMedicalDegreeUniversityName = pgMedicalDegreeUniversityName;
@@ -119,9 +125,11 @@ const Hos_2 = forwardRef((props, ref) => {
       if (err) newErrors[key] = err;
     });
 
+    // Validate proofs
     if (!getDoc(1)?.url) newErrors.mrnProof = "Required";
     if (!getDoc(2)?.url) newErrors.degreeProof = "Required";
 
+    // Validate additional practices
     (additionalPractices || []).forEach((p, idx) => {
       const pSpec = typeof p.specialization === 'object' ? (p.specialization?.value || p.specialization?.name) : p.specialization;
       if (!pSpec) newErrors[`additional_specialization_${idx}`] = "Required";
@@ -133,20 +141,51 @@ const Hos_2 = forwardRef((props, ref) => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Common form field props
+  const commonFieldProps = {
+    compulsory: true,
+    required: true
+  };
+
+  // Council options
   const councilOptions = [
-    { value: "Maharashtra Medical Council", label: "Maharashtra Medical Council" },
-    { value: "Medical Council of India", label: "Medical Council of India" },
+    { value: "National Medical Commission (NMC)", label: "National Medical Commission (NMC)" },
+    { value: "Medical Council of India (MCI)", label: "Medical Council of India (MCI)" },
+    { value: "All India Registration Council", label: "All India Registration Council" },
     { value: "Andhra Pradesh Medical Council", label: "Andhra Pradesh Medical Council" },
     { value: "Arunachal Pradesh Medical Council", label: "Arunachal Pradesh Medical Council" },
     { value: "Assam Medical Council", label: "Assam Medical Council" },
     { value: "Bihar Medical Council", label: "Bihar Medical Council" },
+    { value: "Chandigarh Medical Council", label: "Chandigarh Medical Council" },
     { value: "Chhattisgarh Medical Council", label: "Chhattisgarh Medical Council" },
     { value: "Delhi Medical Council", label: "Delhi Medical Council" },
     { value: "Goa Medical Council", label: "Goa Medical Council" },
     { value: "Gujarat Medical Council", label: "Gujarat Medical Council" },
-    { value: "Haryana Medical Council", label: "Haryana Medical Council" }
+    { value: "Haryana Medical Council", label: "Haryana Medical Council" },
+    { value: "Himachal Pradesh Medical Council", label: "Himachal Pradesh Medical Council" },
+    { value: "Jammu & Kashmir Medical Council", label: "Jammu & Kashmir Medical Council" },
+    { value: "Jharkhand Medical Council", label: "Jharkhand Medical Council" },
+    { value: "Karnataka Medical Council", label: "Karnataka Medical Council" },
+    { value: "Kerala Medical Council", label: "Kerala Medical Council" },
+    { value: "Madhya Pradesh Medical Council", label: "Madhya Pradesh Medical Council" },
+    { value: "Maharashtra Medical Council", label: "Maharashtra Medical Council" },
+    { value: "Manipur Medical Council", label: "Manipur Medical Council" },
+    { value: "Meghalaya Medical Council", label: "Meghalaya Medical Council" },
+    { value: "Mizoram Medical Council", label: "Mizoram Medical Council" },
+    { value: "Nagaland Medical Council", label: "Nagaland Medical Council" },
+    { value: "Odisha Medical Council", label: "Odisha Medical Council" },
+    { value: "Punjab Medical Council", label: "Punjab Medical Council" },
+    { value: "Rajasthan Medical Council", label: "Rajasthan Medical Council" },
+    { value: "Sikkim Medical Council", label: "Sikkim Medical Council" },
+    { value: "Tamil Nadu Medical Council", label: "Tamil Nadu Medical Council" },
+    { value: "Telangana Medical Council", label: "Telangana Medical Council" },
+    { value: "Tripura Medical Council", label: "Tripura Medical Council" },
+    { value: "Uttar Pradesh Medical Council", label: "Uttar Pradesh Medical Council" },
+    { value: "Uttarakhand Medical Council", label: "Uttarakhand Medical Council" },
+    { value: "West Bengal Medical Council", label: "West Bengal Medical Council" }
   ];
 
+  // Post graduate degree options
   const pgDegreeOptions = [
     { value: "MD (Internal Medicine)", label: "MD (Internal Medicine)" },
     { value: "MS (General Surgery)", label: "MS (General Surgery)" },
@@ -156,6 +195,7 @@ const Hos_2 = forwardRef((props, ref) => {
     { value: "MS (ENT)", label: "MS (ENT)" }
   ];
 
+  // Graduation degree options
   const gradDegreeOptions = [
     { value: "MBBS", label: "MBBS" },
     { value: "BDS", label: "BDS" },
@@ -166,47 +206,86 @@ const Hos_2 = forwardRef((props, ref) => {
     { value: "BSMS", label: "BSMS" }
   ];
 
-  const collegeOptions = [
-    { value: "AIIMS Delhi", label: "AIIMS Delhi" },
-    { value: "Grant Medical College Mumbai", label: "Grant Medical College Mumbai" },
-    { value: "KEM Hospital Mumbai", label: "KEM Hospital Mumbai" },
-    { value: "Christian Medical College Vellore", label: "Christian Medical College Vellore" },
-    { value: "Maulana Azad Medical College Delhi", label: "Maulana Azad Medical College Delhi" },
-    { value: "Other", label: "Other" }
-  ];
+  // College/University options
+  const collegeOptions = indianMedicalColleges;
 
+  // Helper to filter colleges based on input
+  const getFilteredColleges = (query) => {
+    const otherOption = { value: "Other", label: "Other" };
+    const sourceOptions = collegeOptions.filter(c => c.value !== 'Other');
+
+    if (!query) return [...sourceOptions, otherOption];
+    const lower = query.toLowerCase();
+    const filtered = sourceOptions.filter(c => c.label.toLowerCase().includes(lower));
+    return [...filtered, otherOption];
+  };
+
+  // Specialization options (from requested list)
   const specializationOptions = [
-    { value: "General Medicine (Internal Medicine)", label: "General Medicine (Internal Medicine)" },
-    { value: "General Surgery", label: "General Surgery" },
-    { value: "Pediatrics", label: "Pediatrics" },
-    { value: "Orthopedics", label: "Orthopedics" },
-    { value: "Obstetrics & Gynecology", label: "Obstetrics & Gynecology" },
-    { value: "Dermatology", label: "Dermatology" },
+    { value: "General Physician", label: "General Physician" },
+    { value: "Pediatrician", label: "Pediatrician" },
+    { value: "Gynaecologist", label: "Gynaecologist" },
+    { value: "Dentist", label: "Dentist" },
+    { value: "Dermatologist", label: "Dermatologist" },
+    { value: "ENT", label: "ENT" },
+    { value: "Ophthalmologist", label: "Ophthalmologist" },
+    { value: "Cardiologist", label: "Cardiologist" },
+    { value: "Orthopedic", label: "Orthopedic" },
+    { value: "Diabetologist", label: "Diabetologist" },
+    { value: "Pulmonologist", label: "Pulmonologist" },
+    { value: "Nephrologist", label: "Nephrologist" },
+    { value: "Gastroenterologist", label: "Gastroenterologist" },
+    { value: "Psychiatrist/Psychologist/ Counsellor", label: "Psychiatrist/Psychologist/ Counsellor" },
+    { value: "Physiotherapist", label: "Physiotherapist" },
+    { value: "Urologist", label: "Urologist" },
+    { value: "Oncologist", label: "Oncologist" },
+    { value: "Neurologist", label: "Neurologist" },
+    { value: "Sexologist", label: "Sexologist" },
+    { value: "Hepatologists", label: "Hepatologists" },
+    { value: "Endocrinologist", label: "Endocrinologist" },
+    { value: "Haematologist", label: "Haematologist" },
+    { value: "Radiologist", label: "Radiologist" },
+    { value: "Homeopathy", label: "Homeopathy" },
+    { value: "Ayurvedic", label: "Ayurvedic" }
   ];
 
-  const getFilteredOptions = (currentValue) => {
+  // Helper to filter specialization options to avoid duplicates
+  const getFilteredOptions = (currentValue, includeOther = false) => {
     const selectedSpecs = [
       (specialization?.value || specialization?.name || specialization),
       ...(additionalPractices || []).map(p => (p.specialization?.value || p.specialization?.name || p.specialization))
     ].filter(Boolean);
 
-    return specializationOptions.filter(opt => {
+    const filtered = specializationOptions.filter(opt => {
+      // If the option is the current one, show it
       if (opt.value === currentValue) return true;
+      // Otherwise, show it only if it's not already selected
       return !selectedSpecs.includes(opt.value);
     });
+
+    if (includeOther) return [...filtered, { value: "Other", label: "Other" }];
+    return filtered;
   };
 
   const handleSubmit = async () => {
+    // Validate
     if (!validateAll()) return false;
 
+    // Check if userId is present (from Step 1)
     const { adminId } = useHospitalRegistrationStore.getState();
     const finalUserId = adminId || userId;
+
     if (!finalUserId) {
       addToast({ title: 'Error', message: 'User ID is missing. Please complete Step 1 first.', type: 'error' });
       return false;
     }
 
+    // Documents validation
+    if (!getDoc(1)?.url) { addToast({ title: 'Error', message: 'Medical Registration Proof is required', type: 'error' }); return false; }
+    if (!getDoc(2)?.url) { addToast({ title: 'Error', message: 'Graduation Degree Proof is required', type: 'error' }); return false; }
+
     try {
+      // Specialization
       const specs = [];
       const primarySpecName = typeof specialization === 'object' ? (specialization.value || specialization.name) : specialization;
       if (primarySpecName) specs.push({ name: primarySpecName, expYears: String(experienceYears) });
@@ -218,6 +297,7 @@ const Hos_2 = forwardRef((props, ref) => {
         });
       }
 
+      // Education
       const edu = [];
       edu.push({
         instituteName: medicalDegreeUniversityName,
@@ -248,8 +328,9 @@ const Hos_2 = forwardRef((props, ref) => {
       };
 
       const res = await axios.post('/hospitals/onboarding/update-admin-doctor-details', payload);
+
       if (res.data.success) {
-        addToast({ title: 'Success', message: 'Professional Details Saved', type: 'success' });
+        addToast({ title: 'Success', message: 'Professional Details Saved Successfully', type: 'success' });
         return true;
       } else {
         addToast({ title: 'Error', message: res.data.message || 'Saving failed', type: 'error' });
@@ -267,16 +348,11 @@ const Hos_2 = forwardRef((props, ref) => {
     submit: handleSubmit
   }));
 
-  const commonFieldProps = {
-    compulsory: true,
-    required: true
-  };
-
   return (
     <div className="flex flex-col h-full bg-white rounded-md shadow-sm overflow-hidden">
       <RegistrationHeader
-        title="Register as Doctor"
-        subtitle="Complete the following information to register as a doctor in the system"
+        title="Professional Details"
+        subtitle="Provide your Professional details and Document for verification"
       />
 
       <div className="flex-1 overflow-y-auto p-6">
@@ -290,10 +366,10 @@ const Hos_2 = forwardRef((props, ref) => {
               <div className="w-full">
                 <InputWithMeta
                   requiredDot
+                  placeholder="Hospital Name"
                   label="Medical Council Registration Number"
                   value={medicalCouncilRegNo}
                   onChange={(val) => handleInputChange({ target: { name: 'medicalCouncilRegNo', value: val } })}
-                  placeholder="Hospital Name"
                   {...commonFieldProps}
                 />
                 {formErrors.medicalCouncilRegNo && <span className="text-red-500 text-xs">{formErrors.medicalCouncilRegNo}</span>}
@@ -303,7 +379,7 @@ const Hos_2 = forwardRef((props, ref) => {
                   label="Registration Council"
                   requiredDot
                   value={medicalCouncilName}
-                  placeholder="Select Medical Council"
+                  placeholder="Select Council"
                   RightIcon={ChevronDown}
                   readonlyWhenIcon={true}
                   onIconClick={() => toggleDropdown('council')}
@@ -325,10 +401,10 @@ const Hos_2 = forwardRef((props, ref) => {
                 <InputWithMeta
                   label="Registration Year"
                   value={medicalCouncilRegYear}
+                  placeholder="Enter Year"
                   requiredDot
                   onChange={(val) => handleInputChange({ target: { name: 'medicalCouncilRegYear', value: val } })}
                   {...commonFieldProps}
-                  placeholder="Enter Year"
                   meta="Visible to Patient"
                 />
                 {formErrors.medicalCouncilRegYear && <span className="text-red-500 text-xs">{formErrors.medicalCouncilRegYear}</span>}
@@ -341,7 +417,7 @@ const Hos_2 = forwardRef((props, ref) => {
                     setDocument({ no: 1, type: 'medical_license', url: key, fileName: name });
                     setFormErrors(prev => ({ ...prev, mrnProof: "" }));
                   }}
-                  meta="Support Size upto 1MB in .png, .jpg, .svg, .webp"
+                  meta="Support Size upto 5MB in .pdf, .jpg, .doc"
                   uploadedKey={getDoc(1)?.url}
                   fileName={getDoc(1)?.fileName}
                 />
@@ -354,12 +430,13 @@ const Hos_2 = forwardRef((props, ref) => {
           <div className="space-y-3 border-b pb-4">
             <h2 className="text-sm font-semibold text-secondary-grey400">Qualifications</h2>
 
+            {/* Graduation */}
             <FormFieldRow>
               <div className="w-full">
                 <InputWithMeta
-                  label="Graduation"
+                  label="Graduation Degree"
                   value={medicalDegreeType}
-                  placeholder="Select Degree Type"
+                  placeholder="Select Degree"
                   requiredDot
                   RightIcon={ChevronDown}
                   readonlyWhenIcon={true}
@@ -379,17 +456,36 @@ const Hos_2 = forwardRef((props, ref) => {
                 <InputWithMeta
                   label="College/ University"
                   value={medicalDegreeUniversityName}
-                  placeholder="Search Name of Institution"
-                  requiredDot
-                  infoIcon
-                  RightIcon={ChevronDown}
-                  readonlyWhenIcon={true}
+                  onChange={(val) => {
+                    handleInputChange({ target: { name: 'medicalDegreeUniversityName', value: val } });
+                    if (!val) setManualEntry(prev => ({ ...prev, grad: false }));
+                  }}
+                  placeholder={manualEntry.grad ? "Enter College Name" : "Select or Type College/University"}
+                  requiredDot={true}
+                  infoIcon={true}
+                  RightIcon={!manualEntry.grad ? ChevronDown : undefined}
+                  readonlyWhenIcon={false}
+                  closeOnReclick={false}
+                  dropdownOpen={openDropdowns['gradCollege'] && !manualEntry.grad}
+                  onFieldOpen={() => {
+                    setOpenDropdowns(prev => ({ ...prev, gradCollege: true }))
+                    if (manualEntry.grad) {
+                      // If manual, maybe we ensure dropdown is closed or just allow typing
+                      setOpenDropdowns(prev => ({ ...prev, gradCollege: false }))
+                    }
+                  }}
                   onIconClick={() => toggleDropdown('gradCollege')}
-                  dropdownOpen={openDropdowns['gradCollege']}
+                  dropdownItemClassName="mb-2"
                   onRequestClose={() => closeDropdown('gradCollege')}
-                  dropdownItems={collegeOptions}
+                  dropdownItems={manualEntry.grad ? [] : getFilteredColleges(medicalDegreeUniversityName)}
                   onSelectItem={(item) => {
-                    handleInputChange({ target: { name: 'medicalDegreeUniversityName', value: item.value } });
+                    if (item.value === 'Other') {
+                      setManualEntry(prev => ({ ...prev, grad: true }));
+                      handleInputChange({ target: { name: 'medicalDegreeUniversityName', value: '' } });
+                    } else {
+                      setManualEntry(prev => ({ ...prev, grad: false }));
+                      handleInputChange({ target: { name: 'medicalDegreeUniversityName', value: item.value } });
+                    }
                     closeDropdown('gradCollege');
                   }}
                   {...commonFieldProps}
@@ -402,8 +498,8 @@ const Hos_2 = forwardRef((props, ref) => {
               <div className="w-full">
                 <InputWithMeta
                   label="Year of Completion"
-                  value={medicalDegreeYearOfCompletion}
                   placeholder="Enter Year"
+                  value={medicalDegreeYearOfCompletion}
                   onChange={(val) => handleInputChange({ target: { name: 'medicalDegreeYearOfCompletion', value: val } })}
                   {...commonFieldProps}
                   requiredDot
@@ -418,7 +514,7 @@ const Hos_2 = forwardRef((props, ref) => {
                     setDocument({ no: 2, type: 'degree_certificate', url: key, fileName: name });
                     setFormErrors(prev => ({ ...prev, degreeProof: "" }));
                   }}
-                  meta="Support Size upto 1MB in .png, .jpg, .svg, .webp"
+                  meta="Support Size upto 5MB in .pdf, .jpg, .doc"
                   uploadedKey={getDoc(2)?.url}
                   fileName={getDoc(2)?.fileName}
                 />
@@ -426,6 +522,7 @@ const Hos_2 = forwardRef((props, ref) => {
               </div>
             </FormFieldRow>
 
+            {/* Post Graduation Radio */}
             <div className="space-y-4">
               <div className="flex gap-6 py-2">
                 <label className="text-sm text-secondary-grey400">Do you have Post Graduation Degree?</label>
@@ -436,6 +533,7 @@ const Hos_2 = forwardRef((props, ref) => {
                     label="Yes"
                     checked={pgMedicalDegreeType !== null}
                     onChange={() => {
+                      // Check if it was null (meaning swiching to yes)
                       if (pgMedicalDegreeType === null) setField('pgMedicalDegreeType', '');
                     }}
                   />
@@ -453,13 +551,16 @@ const Hos_2 = forwardRef((props, ref) => {
                 </div>
               </div>
 
+
+
+              {/* Conditional Post Graduation Fields */}
               {pgMedicalDegreeType !== null && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <InputWithMeta
                       label="Post Graduate Degree"
                       value={pgMedicalDegreeType}
-                      placeholder="Select Degree Type"
+                      placeholder="Select Degree"
                       RightIcon={ChevronDown}
                       requiredDot
                       readonlyWhenIcon={true}
@@ -475,8 +576,8 @@ const Hos_2 = forwardRef((props, ref) => {
                     {formErrors.pgMedicalDegreeType && <span className="text-red-500 text-xs">{formErrors.pgMedicalDegreeType}</span>}
                     <InputWithMeta
                       label="Year of Completion"
-                      requiredDot
                       placeholder="Enter Year"
+                      requiredDot
                       value={pgMedicalDegreeYearOfCompletion}
                       onChange={(val) => handleInputChange({ target: { name: 'pgMedicalDegreeYearOfCompletion', value: val } })}
                     />
@@ -486,17 +587,33 @@ const Hos_2 = forwardRef((props, ref) => {
                     <InputWithMeta
                       label="College/ University"
                       value={pgMedicalDegreeUniversityName}
-                      placeholder="Search Name of Institution"
-                      RightIcon={ChevronDown}
-                      requiredDot
-                      infoIcon
-                      readonlyWhenIcon={true}
+                      onChange={(val) => {
+                        handleInputChange({ target: { name: 'pgMedicalDegreeUniversityName', value: val } });
+                        if (!val) setManualEntry(prev => ({ ...prev, pg: false }));
+                      }}
+                      placeholder={manualEntry.pg ? "Enter College Name" : "Select or Type College/University"}
+                      RightIcon={!manualEntry.pg ? ChevronDown : undefined}
+                      requiredDot={true}
+                      infoIcon={true}
+                      readonlyWhenIcon={false}
+                      closeOnReclick={false}
+                      dropdownOpen={openDropdowns['pgCollege'] && !manualEntry.pg}
+                      onFieldOpen={() => {
+                        setOpenDropdowns(prev => ({ ...prev, pgCollege: true }))
+                        if (manualEntry.pg) setOpenDropdowns(prev => ({ ...prev, pgCollege: false }))
+                      }}
                       onIconClick={() => toggleDropdown('pgCollege')}
-                      dropdownOpen={openDropdowns['pgCollege']}
+                      dropdownItemClassName="mb-2"
                       onRequestClose={() => closeDropdown('pgCollege')}
-                      dropdownItems={collegeOptions}
+                      dropdownItems={manualEntry.pg ? [] : getFilteredColleges(pgMedicalDegreeUniversityName)}
                       onSelectItem={(item) => {
-                        handleInputChange({ target: { name: 'pgMedicalDegreeUniversityName', value: item.value } });
+                        if (item.value === 'Other') {
+                          setManualEntry(prev => ({ ...prev, pg: true }));
+                          handleInputChange({ target: { name: 'pgMedicalDegreeUniversityName', value: '' } });
+                        } else {
+                          setManualEntry(prev => ({ ...prev, pg: false }));
+                          handleInputChange({ target: { name: 'pgMedicalDegreeUniversityName', value: item.value } });
+                        }
                         closeDropdown('pgCollege');
                       }}
                     />
@@ -505,7 +622,7 @@ const Hos_2 = forwardRef((props, ref) => {
                       label="Upload Degree Proof"
                       compulsory={false}
                       onUpload={(key, name) => setDocument({ no: 3, type: 'specialization_certificate', url: key, fileName: name })}
-                      meta="Support Size upto 1MB in .png, .jpg, .svg, .webp"
+                      meta="Support Size upto 5MB in .pdf, .jpg, .doc"
                       uploadedKey={getDoc(3)?.url}
                       fileName={getDoc(3)?.fileName}
                     />
@@ -515,25 +632,44 @@ const Hos_2 = forwardRef((props, ref) => {
             </div>
           </div>
 
+
+
           {/* Practice Details */}
           <div className="space-y-4">
-            <h2 className="text-sm font-semibold text-secondary-grey400">Practice Details</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-secondary-grey400">Practice Details</h2>
 
+            </div>
             <FormFieldRow>
               <div className="w-full">
                 <InputWithMeta
                   label="Primary Specialization"
                   value={typeof specialization === 'object' ? (specialization?.value || specialization?.name || '') : specialization}
-                  placeholder="Select Degree Type"
+                  onChange={(val) => {
+                    handleInputChange({ target: { name: 'specialization', value: val } });
+                    if (!val) setManualEntry(prev => ({ ...prev, spec: false }));
+                  }}
+                  placeholder={manualEntry.spec ? "Enter Specialization" : "Select Degree Type"}
                   requiredDot
-                  RightIcon={ChevronDown}
-                  readonlyWhenIcon={true}
+                  RightIcon={!manualEntry.spec ? ChevronDown : undefined}
+                  readonlyWhenIcon={!manualEntry.spec}
+                  closeOnReclick={false}
+                  onFieldOpen={() => {
+                    setOpenDropdowns(prev => ({ ...prev, specialization: true }))
+                    if (manualEntry.spec) setOpenDropdowns(prev => ({ ...prev, specialization: false }))
+                  }}
                   onIconClick={() => toggleDropdown('specialization')}
-                  dropdownOpen={openDropdowns['specialization']}
+                  dropdownOpen={openDropdowns['specialization'] && !manualEntry.spec}
                   onRequestClose={() => closeDropdown('specialization')}
-                  dropdownItems={getFilteredOptions(typeof specialization === 'object' ? (specialization?.value || specialization?.name || '') : specialization)}
+                  dropdownItems={manualEntry.spec ? [] : getFilteredOptions(typeof specialization === 'object' ? (specialization?.value || specialization?.name || '') : specialization, true)}
                   onSelectItem={(item) => {
-                    handleInputChange({ target: { name: 'specialization', value: item } });
+                    if (item.value === 'Other') {
+                      setManualEntry(prev => ({ ...prev, spec: true }));
+                      handleInputChange({ target: { name: 'specialization', value: '' } });
+                    } else {
+                      setManualEntry(prev => ({ ...prev, spec: false }));
+                      handleInputChange({ target: { name: 'specialization', value: item } });
+                    }
                     closeDropdown('specialization');
                   }}
                   {...commonFieldProps}
@@ -541,17 +677,33 @@ const Hos_2 = forwardRef((props, ref) => {
                 />
                 {formErrors.specialization && <span className="text-red-500 text-xs">{formErrors.specialization}</span>}
               </div>
-              <div className="w-full">
-                <InputWithMeta
-                  label="Year of Experience"
-                  requiredDot={true}
-                  value={experienceYears}
-                  onChange={(val) => handleInputChange({ target: { name: 'experienceYears', value: val } })}
-                  placeholder="Enter Year"
-                />
-                {formErrors.experienceYears && <span className="text-red-500 text-xs">{formErrors.experienceYears}</span>}
+              <div className="w-full flex items-end gap-2">
+                <div className="w-full">
+                  <InputWithMeta
+                    label="Year of Experience"
+                    requiredDot={true}
+                    value={experienceYears}
+                    onChange={(val) => handleInputChange({ target: { name: 'experienceYears', value: val } })}
+                    placeholder="Enter Year"
+                  />
+                  {formErrors.experienceYears && <span className="text-red-500 text-xs">{formErrors.experienceYears}</span>}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setField('specialization', '');
+                    setField('experienceYears', '');
+                    setManualEntry(prev => ({ ...prev, spec: false }));
+                    setFormErrors(prev => ({ ...prev, specialization: "", experienceYears: "" }));
+                  }}
+                  className=" p-2 text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                  title="Clear Specialization"
+                >
+                  <Trash2 size={18} />
+                </button>
               </div>
             </FormFieldRow>
+
 
             {Array.isArray(additionalPractices) && additionalPractices.length > 0 && (
               <div className="space-y-2">
@@ -580,23 +732,33 @@ const Hos_2 = forwardRef((props, ref) => {
                       />
                       {formErrors[`additional_specialization_${idx}`] && <span className="text-red-500 text-xs">{formErrors[`additional_specialization_${idx}`]}</span>}
                     </div>
-                    <div className="w-full">
-                      <InputWithMeta
-                        label="Year of Experience"
-                        requiredDot
-                        value={p.experienceYears}
-                        onChange={(val) => {
-                          updatePractice(idx, { experienceYears: val });
-                          let err = "";
-                          if (!val.trim()) err = "Required";
-                          else if (!/^\d+$/.test(val)) err = "Invalid years";
-                          setFormErrors(prev => ({ ...prev, [`additional_experience_${idx}`]: err }));
-                        }}
-                        placeholder="Enter Year"
-                        compulsory
-                        required
-                      />
-                      {formErrors[`additional_experience_${idx}`] && <span className="text-red-500 text-xs">{formErrors[`additional_experience_${idx}`]}</span>}
+                    <div className="w-full flex items-end gap-2">
+                      <div className="w-full">
+                        <InputWithMeta
+                          label="Year of Experience"
+                          requiredDot
+                          value={p.experienceYears}
+                          onChange={(val) => {
+                            updatePractice(idx, { experienceYears: val });
+                            let err = "";
+                            if (!val.trim()) err = "Required";
+                            else if (!/^\d+$/.test(val)) err = "Invalid years";
+                            setFormErrors(prev => ({ ...prev, [`additional_experience_${idx}`]: err }));
+                          }}
+                          placeholder="Enter Year"
+                          compulsory
+                          required
+                        />
+                        {formErrors[`additional_experience_${idx}`] && <span className="text-red-500 text-xs">{formErrors[`additional_experience_${idx}`]}</span>}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removePractice(idx)}
+                        className="mb-1 p-2 text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                        title="Remove Specialization"
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     </div>
                   </FormFieldRow>
                 ))}
@@ -604,15 +766,17 @@ const Hos_2 = forwardRef((props, ref) => {
             )}
             <div
               onClick={addPractice}
-              className="text-blue-primary250 text-sm cursor-pointer flex items-center gap-1 w-fit"
+              className="text-blue-primary250 text-sm  cursor-pointer flex items-center gap-1 w-fit"
             >
               + Add More Speciality
             </div>
+
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 });
 
 export default Hos_2;
+

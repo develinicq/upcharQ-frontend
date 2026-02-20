@@ -21,7 +21,6 @@ const useStaffStore = create((set, get) => ({
 
         // We track last fetched ID generically
         if (get().lastClinicIdForRoles === idKey && get().roles.length > 0) {
-            console.log("[useStaffStore] Skipping fetchRoles: ID same and data exists.");
             return;
         }
 
@@ -54,7 +53,6 @@ const useStaffStore = create((set, get) => ({
 
         if (!idKey) return;
         if (get().lastClinicIdForStaff === idKey && get().staffList.length > 0) {
-            console.log("[useStaffStore] Skipping fetchStaff: ID same and data exists.");
             return;
         }
 
@@ -99,7 +97,6 @@ const useStaffStore = create((set, get) => ({
 
     fetchPermissions: async () => {
         if (get().permissions) {
-            console.log("[useStaffStore] Skipping fetchPermissions: Data already exists.");
             return;
         }
 

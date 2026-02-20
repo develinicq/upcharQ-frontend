@@ -67,9 +67,7 @@ const ScheduleAppointmentDrawer = ({ open, onClose, patient, onSchedule, zIndex 
     };
 
     const handleSave = () => {
-        console.log("Scheduling for:", patient?.name, {
-            apptType, reason, doctor, category, apptDate, bucketKey, selectedSlotId
-        });
+        
         onSchedule?.();
         onClose();
     };

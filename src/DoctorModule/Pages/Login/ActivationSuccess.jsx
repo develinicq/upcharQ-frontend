@@ -2,10 +2,24 @@ import React, { useState } from 'react';
 import Button from '../../../components/Button';
 import { useNavigate } from 'react-router-dom';
 import HelpSupportDrawer from '@/SuperAdmin/components/HelpSupport/HelpSupportDrawer';
+import { activateDoctor } from '@/services/doctorService';
 
-export default function ActivationSuccess({ onCompleteProfile }) {
+export default function ActivationSuccess({ onCompleteProfile, doctorId }) {
   const navigate = useNavigate();
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+
+  const handleDashboard = async () => {
+    if (doctorId) {
+      try {
+        await activateDoctor(doctorId);
+      } catch (err) {
+        console.error("Activation failed", err);
+        // Continue anyway as they might already be active
+      }
+    }
+    navigate('/doc');
+  };
+
   return (
     <div className="min-h-screen bg-white flex flex-col relative overflow-hidden font-sans">
       {/* Background Blurs */}
@@ -50,7 +64,7 @@ export default function ActivationSuccess({ onCompleteProfile }) {
             <Button
               variant="primary"
               className="w-full sm:w-auto px-4 py-1.5 rounded-sm bg-blue-600 hover:bg-blue-700 text-white font-normal flex items-center justify-center gap-2 text-[11px]"
-              onClick={() => navigate('/doc')}
+              onClick={handleDashboard}
             >
               Go to Dashboard
               <span className="text-lg leading-none">→</span>

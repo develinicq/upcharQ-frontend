@@ -17,7 +17,6 @@ const useDoctorAnalyticsStore = create((set, get) => ({
             lastFetchedParams.year === params.year;
 
         if (isSameParams && get().analytics) {
-            console.log("[useDoctorAnalyticsStore] Skipping fetch: Params same and data exists.");
             return;
         }
 

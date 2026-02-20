@@ -45,12 +45,10 @@ export const ProtectedDoctorRoute = () => {
     // Check Single Doctor Role: Authenticated via Doctor Store
     const isSingleDoc = dAuth.token;
 
-    console.log("ProtectedDoctorRoute Check:", { hToken: !!hToken, hRoles, dToken: !!dAuth.token, isDualRole, isSingleDoc });
 
     if (!isDualRole && !isSingleDoc) {
         if (hToken && hRoles.includes("HOSPITAL_ADMIN") && !hRoles.includes("DOCTOR")) {
             // If logged in as Hospital Admin but NO doctor role, redirect to doctor sign-in
-            console.log("ProtectedDoctorRoute: Hospital-only admin trying to access doctor routes, redirecting to /doc/signin");
             return <Navigate to="/doc/signin" replace state={{ fromGuard: true, message: "Please sign in with a doctor account" }} />;
         }
 
@@ -58,7 +56,6 @@ export const ProtectedDoctorRoute = () => {
         if (isLoggingOut) {
             return <Navigate to="/doc/signin" replace />;
         }
-        console.log("ProtectedDoctorRoute: Redirecting to /doc/signin");
         return <Navigate to="/doc/signin" replace state={{ fromGuard: true }} />;
     }
 
@@ -92,11 +89,9 @@ export const PublicDoctorRoute = ({ children }) => {
     // If logged in as Hospital Admin AND Doctor, block doctor signin
     const isDualRole = hToken && hRoles.includes("HOSPITAL_ADMIN") && hRoles.includes("DOCTOR");
 
-    console.log("PublicDoctorRoute Check:", { hToken: !!hToken, hRoles, isSingleDoc, isDualRole });
 
     // If either scenario is active, redirect to doctor dashboard
     if (isSingleDoc || isDualRole) {
-        console.log("PublicDoctorRoute: Already authenticated. Redirecting to /doc");
         return <Navigate to="/doc" replace />;
     }
 

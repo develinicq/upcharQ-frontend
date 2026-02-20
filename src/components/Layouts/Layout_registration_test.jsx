@@ -54,7 +54,6 @@ const Layout_registration_test = () => {
   // Inject mock userId for testing purposes if missing
   React.useEffect(() => {
     if (registrationType === 'doctor' && !regUserId && !step1UserId) {
-      console.log("Layout_test: Injecting mock userId for testing");
       setRegField('userId', 'TEST_DOC_123');
     }
   }, [registrationType, regUserId, step1UserId, setRegField]);

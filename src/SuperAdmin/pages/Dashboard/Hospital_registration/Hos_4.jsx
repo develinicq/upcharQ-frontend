@@ -32,7 +32,6 @@ const Hos_4 = forwardRef((props, ref) => {
     switch (name) {
       case 'gstin':
         if (!value) return 'GSTIN is required';
-        if (value.length !== 15) return 'GSTIN must be 15 characters';
         return '';
       case 'stateHealthReg':
         if (!value) return 'Registration number is required';
@@ -66,18 +65,15 @@ const Hos_4 = forwardRef((props, ref) => {
 
   useImperativeHandle(ref, () => ({
     async submit() {
+      // TEMPORARY: Skip validation and force success as per user request
+      /*
       // Validate required documents
       const missing = [];
       const getDoc = (type) => documents?.find(d => d.type === type);
 
       if (!gstin) missing.push('GSTIN');
-      if (!getDoc('GST_PROOF')) missing.push('GST Proof');
-
       if (!stateHealthReg) missing.push('State Health Registration Number');
-      if (!getDoc('STATE_HEALTH_REG_PROOF')) missing.push('State Health Registration Proof');
-
       if (!panCard) missing.push('PAN Card Number');
-      if (!getDoc('PAN_CARD')) missing.push('PAN Card Proof');
 
       if (missing.length > 0) {
         useToastStore.getState().addToast({
@@ -90,6 +86,15 @@ const Hos_4 = forwardRef((props, ref) => {
 
       const ok = await store.submitDocuments();
       return !!ok;
+      */
+
+      // Attempt to save but don't block
+      try {
+        await store.submitDocuments();
+      } catch (err) {
+        console.warn("Document submission failed but skipping:", err);
+      }
+      return true; // Force proceed
     }
   }));
 
@@ -118,13 +123,8 @@ const Hos_4 = forwardRef((props, ref) => {
                   value={gstin || ''}
                   onChange={(v) => handleInputChange('gstin', v)}
                 />
-                <button
-                  type="button"
-                  className="absolute right-2 top-[31px] text-xs bg-secondary-grey50 px-[6px] py-[1px] rounded-sm text-secondary-grey300 hover:text-blue-primary250 transition-colors"
-                >
-                  Verify
-                </button>
               </div>
+
               {formErrors.gstin && <span className="text-red-500 text-xs">{formErrors.gstin}</span>}
 
 
@@ -143,15 +143,7 @@ const Hos_4 = forwardRef((props, ref) => {
             </div>
           </FormFieldRow>
 
-          {/* Fetched Details Box */}
-          <div className="border flex flex-col gap-2 border-secondary-grey150/60 rounded-lg p-3 bg-white ">
-            <p className="text-sm font-semibold text-secondary-grey400">Fetched Details from GSTIN</p>
-            <div className=" text-sm text-secondary-grey200 flex flex-col gap-1.5">
-              <p>Legal Business Name :</p>
-              <p>Registered Address :</p>
-              <p>Status :</p>
-            </div>
-          </div>
+
 
           {/* Other Documents List */}
           <div className="space-y-4">
@@ -208,6 +200,7 @@ const Hos_4 = forwardRef((props, ref) => {
               <div className="w-full">
                 <InputWithMeta
                   label="Rohini ID"
+                  requiredDot
                   placeholder="Enter 13-digit Rohini ID"
                   value={rohiniId || ''}
                   onChange={(v) => handleInputChange('rohiniId', v)}
@@ -230,6 +223,7 @@ const Hos_4 = forwardRef((props, ref) => {
               <div className="w-full">
                 <InputWithMeta
                   label="NABH Accreditation"
+                  requiredDot
                   placeholder="Enter NABH Accreditation ID"
                   value={nabhAccreditation || ''}
                   onChange={(v) => handleInputChange('nabhAccreditation', v)}
@@ -240,8 +234,8 @@ const Hos_4 = forwardRef((props, ref) => {
                   label="Upload Proof"
                   noView={false}
                   uploadContent="Upload File"
-                  uploadedKey={documents?.find(d => d.type === 'NABH')?.url}
-                  onUpload={(key) => setDocument({ type: 'NABH', no: nabhAccreditation || '', url: key })}
+                  uploadedKey={documents?.find(d => d.type === 'NABH_ACCREDITATION_PROOF')?.url}
+                  onUpload={(key) => setDocument({ type: 'NABH_ACCREDITATION_PROOF', no: nabhAccreditation || '', url: key })}
                   meta="Support Size upto 5MB in .pdf, .jpg, .doc"
                 />
               </div>

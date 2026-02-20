@@ -4,7 +4,7 @@ import { Check, Info, Minus, Plus } from "lucide-react";
 
 
 
-const plans = [
+export const plans = [
   {
     id: "trial",
     name: "Upchar-Q Trial",
@@ -1061,10 +1061,10 @@ export default function Step6() {
 
   return (
     <div className="h-screen bg-background flex flex-col no-scrollbar ">
-      
+
 
       <div className="flex flex-1 overflow-hidden">
-        
+
 
         <main className="flex-1 overflow-hidden p-4">
           <div className="max-w-7xl mx-auto flex flex-col h-full">
@@ -1090,31 +1090,28 @@ export default function Step6() {
               <div className="flex items-center justify-center bg-blue-primary50  rounded">
                 <button
                   onClick={() => setBillingCycle("monthly")}
-                  className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                    billingCycle === "monthly"
+                  className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${billingCycle === "monthly"
                       ? "bg-blue-primary250 text-monochrom-white"
                       : "text-secondary-grey300"
-                  }`}
+                    }`}
                 >
                   Billed Monthly
                 </button>
                 <button
                   onClick={() => setBillingCycle("halfYearly")}
-                  className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                    billingCycle === "halfYearly"
+                  className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${billingCycle === "halfYearly"
                       ? "bg-blue-primary250 text-monochrom-white"
                       : "text-secondary-grey300"
-                  }`}
+                    }`}
                 >
                   Billed Half-Yearly
                 </button>
                 <button
                   onClick={() => setBillingCycle("yearly")}
-                  className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                    billingCycle === "yearly"
+                  className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${billingCycle === "yearly"
                       ? "bg-blue-primary250 text-monochrom-white"
                       : "text-secondary-grey300"
-                  }`}
+                    }`}
                 >
                   Billed Annually
                 </button>
@@ -1158,11 +1155,10 @@ export default function Step6() {
                     <div
                       key={plan.id}
                       onClick={() => setSelectedPlan(plan.id)}
-                      className={`relative rounded-lg border cursor-pointer transition-all border-blue-primary400 p-4 ${
-                        isSelected
+                      className={`relative rounded-lg border cursor-pointer transition-all border-blue-primary400 p-4 ${isSelected
                           ? " bg-blue-primary250 text-monochrom-white"
                           : "bg-card hover:border-blue-primary150"
-                      }`}
+                        }`}
                     >
                       {/* Plan Icon & Name & Price */}
                       <div className="flex items-center gap-2 mb-3">
@@ -1172,50 +1168,45 @@ export default function Step6() {
 
                         <div className="flex flex-col">
                           <h3
-                            className={`text-sm font-semibold ${
-                              isSelected
+                            className={`text-sm font-semibold ${isSelected
                                 ? "text-monochrom-white"
                                 : "text-secondary-grey300"
-                            }`}
+                              }`}
                           >
                             {plan.name}
                           </h3>
                           {isTrial ? (
                             <p
-                              className={`text-xl font-bold ${
-                                isSelected
+                              className={`text-xl font-bold ${isSelected
                                   ? "text-monochrom-white"
                                   : "text-blue-primary250"
-                              }`}
+                                }`}
                             >
                               {plan.price}
                             </p>
                           ) : (
                             <div className="flex items-baseline gap-1">
                               <span
-                                className={`text-xl font-bold ${
-                                  isSelected
+                                className={`text-xl font-bold ${isSelected
                                     ? "text-monochrom-white"
                                     : "text-blue-primary250"
-                                }`}
+                                  }`}
                               >
                                 {plan.price}
                               </span>
                               <span
-                                className={`text-xl font-bold ${
-                                  isSelected
+                                className={`text-xl font-bold ${isSelected
                                     ? "text-monochrom-white/80"
                                     : "text-blue-primary250"
-                                }`}
+                                  }`}
                               >
                                 {plan.period}
                               </span>
                               <span
-                                className={`text-xs ${
-                                  isSelected
+                                className={`text-xs ${isSelected
                                     ? "text-monochrom-white/60"
                                     : "text-secondary-grey200"
-                                }`}
+                                  }`}
                               >
                                 {plan.taxNote}
                               </span>
@@ -1250,11 +1241,10 @@ export default function Step6() {
                       {/* Features */}
                       <div className="mt-4">
                         <p
-                          className={`text-xs mb-2 ${
-                            isSelected
+                          className={`text-xs mb-2 ${isSelected
                               ? "text-monochrom-white/80"
                               : "text-secondary-grey200"
-                          }`}
+                            }`}
                         >
                           Access To:
                         </p>
@@ -1266,9 +1256,8 @@ export default function Step6() {
                             >
                               <div className="flex items-center gap-2">
                                 <span
-                                  className={`w-4 h-4 rounded-full flex items-center justify-center text-xs ${
-                                    isSelected ? " " : ""
-                                  }`}
+                                  className={`w-4 h-4 rounded-full flex items-center justify-center text-xs ${isSelected ? " " : ""
+                                    }`}
                                 >
                                   <svg
                                     width="16"
@@ -1366,11 +1355,10 @@ export default function Step6() {
                     disabled={doctors === 1}
                     onClick={() => setDoctors(doctors - 1)}
                     className={`w-8 h-8 rounded border flex items-center justify-center
-        ${
-          doctors === 1
-            ? "border-secondary-grey100 text-secondary-grey150 cursor-not-allowed"
-            : "border-border text-secondary-grey300 hover:bg-muted"
-        }`}
+        ${doctors === 1
+                        ? "border-secondary-grey100 text-secondary-grey150 cursor-not-allowed"
+                        : "border-border text-secondary-grey300 hover:bg-muted"
+                      }`}
                   >
                     <Minus className="w-4 h-4" />
                   </button>
@@ -1383,11 +1371,10 @@ export default function Step6() {
                     disabled={doctors === 2}
                     onClick={() => setDoctors(doctors + 1)}
                     className={`w-8 h-8 rounded border flex items-center justify-center
-        ${
-          doctors === 2
-            ? "border-secondary-grey100 text-secondary-grey150 cursor-not-allowed"
-            : "border-border text-secondary-grey300 hover:bg-muted"
-        }`}
+        ${doctors === 2
+                        ? "border-secondary-grey100 text-secondary-grey150 cursor-not-allowed"
+                        : "border-border text-secondary-grey300 hover:bg-muted"
+                      }`}
                   >
                     <Plus className="w-4 h-4" />
                   </button>
@@ -1405,11 +1392,10 @@ export default function Step6() {
                     disabled={staff === 1}
                     onClick={() => setStaff(staff - 1)}
                     className={`w-8 h-8 rounded border flex items-center justify-center
-        ${
-          staff === 1
-            ? "border-secondary-grey100 text-secondary-grey150 cursor-not-allowed"
-            : "border-border text-secondary-grey300 hover:bg-muted"
-        }`}
+        ${staff === 1
+                        ? "border-secondary-grey100 text-secondary-grey150 cursor-not-allowed"
+                        : "border-border text-secondary-grey300 hover:bg-muted"
+                      }`}
                   >
                     <Minus className="w-4 h-4" />
                   </button>
@@ -1422,11 +1408,10 @@ export default function Step6() {
                     disabled={staff === 4}
                     onClick={() => setStaff(staff + 1)}
                     className={`w-8 h-8 rounded border flex items-center justify-center
-        ${
-          staff === 4
-            ? "border-secondary-grey100 text-secondary-grey150 cursor-not-allowed"
-            : "border-border text-secondary-grey300 hover:bg-muted"
-        }`}
+        ${staff === 4
+                        ? "border-secondary-grey100 text-secondary-grey150 cursor-not-allowed"
+                        : "border-border text-secondary-grey300 hover:bg-muted"
+                      }`}
                   >
                     <Plus className="w-4 h-4" />
                   </button>

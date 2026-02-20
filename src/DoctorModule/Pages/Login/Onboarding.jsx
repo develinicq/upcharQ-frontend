@@ -8,14 +8,14 @@ import PasswordStrengthBar from '../../../components/FormItems/PasswordStrengthB
 import DoctorInfoCard from '../../Components/Login/DoctorInfoCard';
 import HelpSupportDrawer from '@/SuperAdmin/components/HelpSupport/HelpSupportDrawer';
 
-const Onboarding = ({ onContinue }) => {
+const Onboarding = ({ onContinue, details: propDetails }) => {
   const [formData, setFormData] = useState({
     password: '',
     confirmPassword: '',
   });
   const [searchParams] = useSearchParams();
-  const [details, setDetails] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [details, setDetails] = useState(propDetails || null);
+  const [loading, setLoading] = useState(!propDetails);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
@@ -46,6 +46,13 @@ const Onboarding = ({ onContinue }) => {
   const didFetchRef = useRef(false);
 
   useEffect(() => {
+    // If details passed via props, use them
+    if (propDetails) {
+      setDetails(propDetails);
+      setLoading(false);
+      return;
+    }
+
     if (didFetchRef.current) return;
     const code = searchParams.get('code');
     if (!code) return; // handled by mock above for now
@@ -95,7 +102,7 @@ const Onboarding = ({ onContinue }) => {
         setError(msg);
         setLoading(false);
       });
-  }, [token, searchParams]);
+  }, [token, searchParams, propDetails]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

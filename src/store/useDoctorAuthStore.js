@@ -105,7 +105,6 @@ const useDoctorAuthStore = create(
 
                     // Clear auth on 401 (invalid/expired token)
                     if (error.response?.status === 401) {
-                        console.log('Token invalid/expired. Clearing doctor auth.');
                         get().clearAuth();
                     }
 

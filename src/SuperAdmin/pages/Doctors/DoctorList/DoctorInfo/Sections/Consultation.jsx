@@ -78,7 +78,7 @@ const toHM = (iso) => {
 };
 
 const DEFAULT_SCHEDULE = [
-  { day: "Monday", available: true, sessions: [{ sessionNumber: 1, startTime: "1970-01-01T09:00:00.000Z", endTime: "1970-01-01T13:00:00.000Z" }] },
+  { day: "Monday", available: true, sessions: [{ sessionNumber: 1, startTime: "1970-01-01T03:30:00.000Z", endTime: "1970-01-01T07:30:00.000Z" }] },
   { day: "Tuesday", available: false, sessions: [] },
   { day: "Wednesday", available: false, sessions: [] },
   { day: "Thursday", available: false, sessions: [] },
@@ -99,7 +99,6 @@ const Consultation = ({ doctor, onLoadingChange, cache = {}, updateCache, clinic
   const doctorDetails = doctor;
 
   useEffect(() => {
-    console.log('[Consultation] Mounted with doctor:', doctor);
     if (doctor?.consultationDetails) {
       setConsultationDetails(doctor.consultationDetails);
       setHasData(true);
@@ -157,8 +156,25 @@ const Consultation = ({ doctor, onLoadingChange, cache = {}, updateCache, clinic
     try {
       setConsultationLoading(true);
       if (!clinicId) {
-        // Without clinicId we cannot fetch consultation details; show empty state
-        setHasData(false);
+        console.warn("Consultation: No clinicId found. Rendering default/empty state for UI demo.");
+        // Proceed to render default UI instead of returning early with "No Data"
+        const payload = {
+          consultationFees: [
+            {
+              hospitalId: null,
+              clinicId: 'mock-clinic-id',
+              consultationFee: "",
+              followUpFee: "",
+              autoApprove: false,
+              avgDurationMinutes: 0,
+              availabilityDurationDays: undefined,
+            },
+          ],
+          slotTemplates: { schedule: DEFAULT_SCHEDULE, clinicId: 'mock-clinic-id' },
+        };
+        setConsultationDetails(payload);
+        setHasData(true);
+        setConsultationLoading(false);
         return;
       }
 
@@ -167,6 +183,28 @@ const Consultation = ({ doctor, onLoadingChange, cache = {}, updateCache, clinic
       const schedData = res?.data?.scheduleDetails;
 
       if (!feesData && !schedData) {
+        if (clinicId) {
+          // Initialize with defaults if we have a clinicId but no data
+          const payload = {
+            consultationFees: [
+              {
+                hospitalId: null,
+                clinicId: clinicId,
+                consultationFee: "",
+                followUpFee: "",
+                autoApprove: false,
+                avgDurationMinutes: 0,
+                availabilityDurationDays: undefined,
+              },
+            ],
+            slotTemplates: { schedule: DEFAULT_SCHEDULE, clinicId },
+          };
+          setConsultationDetails(payload);
+          setHasData(true);
+          if (typeof updateCacheRef.current === "function") updateCacheRef.current(payload);
+          setConsultationDirty(false); // Clean state until user edits
+          return;
+        }
         setHasData(false);
         return;
       }
@@ -197,8 +235,28 @@ const Consultation = ({ doctor, onLoadingChange, cache = {}, updateCache, clinic
       if (typeof updateCacheRef.current === "function") updateCacheRef.current(payload);
       setConsultationDirty(false);
     } catch (err) {
-      console.error("Failed to fetch consultation details for SuperAdmin:", err);
-      setHasData(false);
+      console.error("Failed to fetch consultation details for SuperAdmin:", {
+        status: err?.response?.status,
+        message: err?.response?.data?.message || err.message,
+        error: err
+      });
+      // Fallback to default state on error so the form is usable
+      const payload = {
+        consultationFees: [
+          {
+            hospitalId: null,
+            clinicId: clinicId || 'mock-clinic-id',
+            consultationFee: "",
+            followUpFee: "",
+            autoApprove: false,
+            avgDurationMinutes: 0,
+            availabilityDurationDays: undefined,
+          },
+        ],
+        slotTemplates: { schedule: DEFAULT_SCHEDULE, clinicId: clinicId || 'mock-clinic-id' },
+      };
+      setConsultationDetails(payload);
+      setHasData(true);
     } finally {
       setConsultationLoading(false);
     }
@@ -210,7 +268,6 @@ const Consultation = ({ doctor, onLoadingChange, cache = {}, updateCache, clinic
 
   // Mock API for SuperAdmin view
   const putDoctorConsultationDetails = async (payload) => {
-    console.log("Mock save consultation:", payload);
     await new Promise(r => setTimeout(r, 800));
   };
 
@@ -529,8 +586,8 @@ const Consultation = ({ doctor, onLoadingChange, cache = {}, updateCache, clinic
                         : [
                           {
                             sessionNumber: 1,
-                            startTime: "1970-01-01T09:00:00.000Z",
-                            endTime: "1970-01-01T01:00:00.000Z",
+                            startTime: "1970-01-01T03:30:00.000Z",
+                            endTime: "1970-01-01T07:30:00.000Z",
                             maxTokens: null,
                           },
                         ]
@@ -585,10 +642,12 @@ const Consultation = ({ doctor, onLoadingChange, cache = {}, updateCache, clinic
                           <span className="text-sm text-secondary-grey300 whitespace-nowrap">
                             Token Available:
                           </span>
-                          <div className="">
+                          <div className="w-20">
                             <input
-                              className="h-8 w-full text-sm border border-secondary-grey200 rounded px-2 bg-white text-secondary-grey400 focus:outline-none focus:border-blue-primary500"
-                              placeholder="Value"
+                              type="number"
+                              min="0"
+                              className="h-8 w-full text-sm border border-secondary-grey200 rounded px-2 bg-white text-gray-900 focus:outline-none focus:border-blue-500 placeholder:text-gray-400"
+                              placeholder="0"
                               value={s.maxTokens ?? ""}
                               onChange={(e) => {
                                 const v = e.target.value;
@@ -662,23 +721,23 @@ const Consultation = ({ doctor, onLoadingChange, cache = {}, updateCache, clinic
                                 // Add Session 1 (matching placeholder)
                                 sessionsToAdd.push({
                                   sessionNumber: 1,
-                                  startTime: "1970-01-01T09:00:00.000Z",
-                                  endTime: "1970-01-01T01:00:00.000Z", // Matching 01:00
+                                  startTime: "1970-01-01T03:30:00.000Z",
+                                  endTime: "1970-01-01T07:30:00.000Z", // 09:00 - 13:00 IST
                                   maxTokens: null,
                                 });
                                 // Add Session 2 (new default)
                                 sessionsToAdd.push({
                                   sessionNumber: 2,
-                                  startTime: "1970-01-01T09:00:00.000Z",
-                                  endTime: "1970-01-01T17:00:00.000Z",
+                                  startTime: "1970-01-01T03:30:00.000Z",
+                                  endTime: "1970-01-01T11:30:00.000Z", // 09:00 - 17:00 IST
                                   maxTokens: null,
                                 });
                               } else {
                                 // Add Next Session
                                 sessionsToAdd.push({
                                   sessionNumber: currentSessionCount + 1,
-                                  startTime: "1970-01-01T09:00:00.000Z",
-                                  endTime: "1970-01-01T17:00:00.000Z",
+                                  startTime: "1970-01-01T03:30:00.000Z",
+                                  endTime: "1970-01-01T11:30:00.000Z", // 09:00 - 17:00 IST
                                   maxTokens: null,
                                 });
                               }
@@ -697,7 +756,31 @@ const Consultation = ({ doctor, onLoadingChange, cache = {}, updateCache, clinic
                           <input
                             type="checkbox"
                             disabled={!d.available}
-                            className="w-4 h-4"
+                            className="w-4 h-4 cursor-pointer"
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setConsultationDetails((prev) => {
+                                  const next = hydrateState(prev);
+                                  const currentDay = next.slotTemplates.schedule.find(x => x.day === d.day || String(x.day).toUpperCase() === String(d.day).toUpperCase());
+                                  if (!currentDay) return next;
+
+                                  const sourceSessions = JSON.parse(JSON.stringify(currentDay.sessions || []));
+                                  const cleanedSessions = sourceSessions.map(s => ({ ...s, id: undefined }));
+
+                                  next.slotTemplates.schedule.forEach(day => {
+                                    if (day.day !== d.day) {
+                                      day.available = currentDay.available;
+                                      day.sessions = JSON.parse(JSON.stringify(cleanedSessions));
+                                    }
+                                  });
+                                  return next;
+                                });
+                                setConsultationDirty(true);
+                                // visual feedback: reset checkbox so it acts as an action
+                                setTimeout(() => { e.target.checked = false; }, 200);
+                                useToastStore.getState().addToast({ title: "Applied", message: `Schedule for ${d.day} applied to all days.`, type: "success" });
+                              }
+                            }}
                           />
 
                           <span>Apply to All Days</span>

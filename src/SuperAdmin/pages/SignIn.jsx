@@ -28,12 +28,20 @@ export default function SuperAdminSignIn() {
     const [maskedPhone, setMaskedPhone] = useState("");
 
     // OTP State
-    const [loginStep, setLoginStep] = useState('credentials'); // 'credentials' | 'otp'
+    const [loginStep, setLoginStep] = useState('credentials'); // 'credentials' | 'otp' | 'forgot-password' | 'forgot-password-otp'
     const [otp, setOtp] = useState(new Array(6).fill(""));
     const [challengeId, setChallengeId] = useState(null);
     const [resendTimer, setResendTimer] = useState(0);
     const [resending, setResending] = useState(false);
     const otpInputRefs = useRef([]);
+
+    // Forgot Password State
+    const [forgotEmail, setForgotEmail] = useState("");
+    const [newPassword, setNewPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [forgotEmailMeta, setForgotEmailMeta] = useState("");
+    const [newPasswordMeta, setNewPasswordMeta] = useState("");
+    const [confirmPasswordMeta, setConfirmPasswordMeta] = useState("");
 
     const location = useLocation();
     const hasToasted = useRef(false);
@@ -137,6 +145,12 @@ export default function SuperAdminSignIn() {
             console.error(error);
             const msg = error.response?.data?.message || error.message || "Something went wrong";
             setErrorMsg(msg);
+
+            // If it's an invalid email/role/password, show it under the identifier field
+            if (msg === "Invalid Email") {
+                setIdentifierMeta(msg);
+            }
+
             addToast({
                 title: "Login Failed",
                 message: msg,
@@ -149,6 +163,22 @@ export default function SuperAdminSignIn() {
         }
     };
 
+    const handleStepChange = (step) => {
+        setLoginStep(step);
+        // Pre-fill email if identifier looks like an email
+        if (step === 'forgot-password' && identifier.includes('@')) {
+            setForgotEmail(identifier);
+        }
+        // Clear all error/meta states
+        setErrorMsg("");
+        setIdentifierMeta("");
+        setPasswordMeta("");
+        setForgotEmailMeta("");
+        setNewPasswordMeta("");
+        setConfirmPasswordMeta("");
+        setOtp(new Array(6).fill(""));
+    };
+
     const handleVerify = async () => {
         if (!isOtpFilled) return;
         setSubmitting(true);
@@ -156,32 +186,49 @@ export default function SuperAdminSignIn() {
 
         try {
             const otpValue = otp.join("");
-            const res = await axios.post('/superAdmin/verify-otp', {
+
+            // Logic for regular login OTP vs Forgot Password OTP
+            const endpoint = loginStep === 'forgot-password-otp'
+                ? '/superAdmin/forgot-password/verify'
+                : '/superAdmin/verify-otp';
+
+            const res = await axios.post(endpoint, {
                 challengeId: challengeId,
                 otp: otpValue
             });
 
             if (res.data.success) {
-                const token = res.data.data?.token;
-
-                if (token) {
-                    setToken(token);
-                    if (remember) {
-                        try {
-                            localStorage.setItem('superAdminToken', token);
-                        } catch { }
-                    }
-
+                if (loginStep === 'forgot-password-otp') {
                     addToast({
-                        title: "Login Successful",
-                        message: "Redirecting to dashboard...",
+                        title: "Success",
+                        message: "Password reset successful. Please login with your new password.",
                         type: "success",
-                        duration: 2000
+                        duration: 4000
                     });
-
-                    navigate("/dashboard", { replace: true });
+                    setLoginStep('credentials');
+                    setOtp(new Array(6).fill(""));
                 } else {
-                    throw new Error("Invalid response: Missing token");
+                    const token = res.data.data?.token;
+
+                    if (token) {
+                        setToken(token);
+                        if (remember) {
+                            try {
+                                localStorage.setItem('superAdminToken', token);
+                            } catch { }
+                        }
+
+                        addToast({
+                            title: "Login Successful",
+                            message: "Redirecting to dashboard...",
+                            type: "success",
+                            duration: 2000
+                        });
+
+                        navigate("/dashboard", { replace: true });
+                    } else {
+                        throw new Error("Invalid response: Missing token");
+                    }
                 }
             } else {
                 throw new Error(res.data.message || "OTP Verification failed");
@@ -196,6 +243,48 @@ export default function SuperAdminSignIn() {
                 message: msg,
                 type: "error",
                 duration: 4000
+            });
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleForgotPasswordRequest = async () => {
+        setForgotEmailMeta("");
+        setNewPasswordMeta("");
+        setConfirmPasswordMeta("");
+
+        if (!forgotEmail) return setForgotEmailMeta("Email is required");
+        if (!newPassword) return setNewPasswordMeta("New password is required");
+        if (newPassword.length < 8) return setNewPasswordMeta("Password must be at least 8 characters");
+        if (newPassword !== confirmPassword) return setConfirmPasswordMeta("Passwords do not match");
+
+        setSubmitting(true);
+        try {
+            const res = await axios.post('/superAdmin/forgot-password/request', {
+                email: forgotEmail,
+                newPassword,
+                confirmPassword
+            });
+
+            if (res.data.success) {
+                setChallengeId(res.data.data?.challengeId);
+                addToast({
+                    title: "OTP Sent",
+                    message: "OTP sent to your registered email.",
+                    type: "success",
+                    duration: 3000
+                });
+                setLoginStep('forgot-password-otp');
+                setOtp(new Array(6).fill(""));
+            }
+        } catch (error) {
+            const msg = error.response?.data?.message || "Failed to process request";
+            if (msg === "Invalid Email") setForgotEmailMeta(msg);
+            addToast({
+                title: "Request Failed",
+                message: msg,
+                type: "error"
             });
         } finally {
             setSubmitting(false);
@@ -257,7 +346,7 @@ export default function SuperAdminSignIn() {
             </div>
 
             {/* Right form */}
-            <div className=" flex flex-col gap-16  bg-white px-3 p-3 w-1/2">
+            <div className="flex flex-col gap-16 bg-white px-3 p-3 w-full md:w-1/2">
                 <div className=" flex flex-col items-start gap-1 px-3">
                     <img src="/logo.svg" alt="eClinic-Q" className="h-7" />
                     <div className="bg-warning-50 px-1 w-fit py-[2px] min-w-[18px] text-warning-400 text-[12px]">Super Admin</div>
@@ -266,10 +355,14 @@ export default function SuperAdminSignIn() {
                 <div className="flex items-center justify-center">
                     <div className="w-full max-w-[500px] flex flex-col gap-6">
                         <div className="flex flex-col gap-1">
-                            <h1 className="text-[24px]  font-bold text-secondary-grey400 leading-tight">
-                                Welcome Back!
+                            <h1 className="text-[24px] font-bold text-secondary-grey400 leading-tight">
+                                {loginStep === 'credentials' || loginStep === 'otp' ? 'Welcome Back!' : 'Reset Password'}
                             </h1>
-                            <p className="text-[14px] text-secondary-grey300 leading-tight">Login in to access super admin.</p>
+                            <p className="text-[14px] text-secondary-grey300 leading-tight">
+                                {loginStep === 'credentials' || loginStep === 'otp'
+                                    ? 'Login in to access super admin.'
+                                    : 'Provide your email to receive a reset OTP.'}
+                            </p>
                         </div>
 
 
@@ -320,9 +413,17 @@ export default function SuperAdminSignIn() {
                                         </label>
                                     </div>
 
-                                    <div className="text-right text-[14px] text-blue-primary250 cursor-pointer">
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            handleStepChange('forgot-password');
+                                        }}
+                                        className="text-right text-[14px] text-blue-primary250 cursor-pointer hover:underline bg-transparent border-none p-0 outline-none block"
+                                    >
                                         Forgot Password?
-                                    </div>
+                                    </button>
                                 </div>
 
                                 {submitting ? (
@@ -361,16 +462,75 @@ export default function SuperAdminSignIn() {
                                     </button>
                                 )}
                             </div>
+                        ) : loginStep === 'forgot-password' ? (
+                            <div className="space-y-3 animate-in fade-in slide-in-from-right-4 duration-300">
+                                <InputWithMeta
+                                    label="Enter Registered Email ID"
+                                    placeholder="Enter Email"
+                                    value={forgotEmail}
+                                    requiredDot
+                                    onChange={(value) => setForgotEmail(value)}
+                                    meta={forgotEmailMeta}
+                                    metaClassName="text-red-500"
+                                    isInvalid={!!forgotEmailMeta}
+                                />
+
+                                <InputWithMeta
+                                    label="New Password"
+                                    placeholder="Enter New Password"
+                                    value={newPassword}
+                                    requiredDot
+                                    onChange={(value) => setNewPassword(value)}
+                                    type={showPassword ? "text" : "password"}
+                                    RightIcon={showPassword ? Eye : EyeOff}
+                                    onIconClick={() => setShowPassword(!showPassword)}
+                                    readonlyWhenIcon={false}
+                                    meta={newPasswordMeta}
+                                    metaClassName="text-red-500"
+                                    isInvalid={!!newPasswordMeta}
+                                />
+
+                                <InputWithMeta
+                                    label="Confirm Password"
+                                    placeholder="Confirm Password"
+                                    value={confirmPassword}
+                                    requiredDot
+                                    onChange={(value) => setConfirmPassword(value)}
+                                    type={showPassword ? "text" : "password"}
+                                    meta={confirmPasswordMeta}
+                                    metaClassName="text-red-500"
+                                    isInvalid={!!confirmPasswordMeta}
+                                />
+
+                                <div className="flex flex-col gap-2 pt-2">
+                                    <button
+                                        onClick={handleForgotPasswordRequest}
+                                        disabled={submitting}
+                                        className={`w-full h-[32px] rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 bg-blue-primary250 hover:bg-blue-700 text-white shadow-sm ${submitting ? 'opacity-70 cursor-wait' : ''}`}
+                                    >
+                                        {submitting ? 'Processing...' : 'Confirm'}
+                                    </button>
+                                    <button
+                                        onClick={() => handleStepChange('credentials')}
+                                        disabled={submitting}
+                                        className="w-full h-[32px] text-sm text-secondary-grey300 hover:text-secondary-grey400"
+                                    >
+                                        Back to Login
+                                    </button>
+                                </div>
+                            </div>
                         ) : (
                             <div className="flex flex-col items-center  gap-4 w-full animate-in fade-in slide-in-from-right-4 duration-300">
                                 <div className="text-[14px] text-secondary-grey300 ">
-                                    We have sent a 6 digit OTP on <span className="font-semibold">{maskedPhone}</span> and registered email Id <span className="font-semibold"> {maskedEmail}</span>, please sign up if you are a new user
+                                    {loginStep === 'forgot-password-otp'
+                                        ? `We have sent a 6 digit OTP to your email ${forgotEmail}. Please enter it to reset your password.`
+                                        : `We have sent a 6 digit OTP on ${maskedPhone} and registered email Id ${maskedEmail}.`}
                                 </div>
 
                                 <div className="flex flex-col items-center gap-3 w-full">
                                     <div className="flex flex-col gap-1 items-center">
                                         <label className="text-[14px] font-medium text-secondary-grey400">
-                                            Enter Mobile Verification Code
+                                            Enter Verification Code
                                         </label>
                                         <div className="text-[12px] text-secondary-grey200">It may take a minute or two to receive your code.</div>
                                     </div>
@@ -401,7 +561,11 @@ export default function SuperAdminSignIn() {
                                                 type="button"
                                                 onClick={() => {
                                                     setOtp(new Array(6).fill(""));
-                                                    handleLogin(true);
+                                                    if (loginStep === 'forgot-password-otp') {
+                                                        handleForgotPasswordRequest();
+                                                    } else {
+                                                        handleLogin(true);
+                                                    }
                                                     startResendTimer();
                                                 }}
                                                 className="text-blue-primary250 text-[14px] hover:underline"
@@ -449,7 +613,14 @@ export default function SuperAdminSignIn() {
                                         </button>
                                     )}
                                 </div>
-
+                                {loginStep === 'forgot-password-otp' && (
+                                    <button
+                                        onClick={() => setLoginStep('forgot-password')}
+                                        className="text-sm text-secondary-grey300 hover:text-secondary-grey400"
+                                    >
+                                        Change Email/Password
+                                    </button>
+                                )}
                             </div>
                         )}
 

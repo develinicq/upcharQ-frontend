@@ -10,6 +10,7 @@ import useToastStore from "@/store/useToastStore";
 import useDoctorAuthStore from "@/store/useDoctorAuthStore";
 import useFrontDeskAuthStore from "@/store/useFrontDeskAuthStore";
 import useHospitalFrontDeskAuthStore from "@/store/useHospitalFrontDeskAuthStore";
+import useHospitalAuthStore from "@/store/useHospitalAuthStore";
 
 import RadioButton from "@/components/GeneralDrawer/RadioButton";
 
@@ -178,14 +179,22 @@ export default function DocSignIn() {
             return;
           }
 
-          // Reject dual-role users (HOSPITAL_ADMIN + DOCTOR)
+          // Redirect Hospital Admins to Hospital Dashboard
           if (roles.includes("HOSPITAL_ADMIN")) {
             useDoctorAuthStore.getState().clearAuth();
+
+            const { setToken, setRoleNames, setUser } = useHospitalAuthStore.getState();
+            setToken(res.data.token);
+            setRoleNames(roles);
+            setUser(res.data.user);
+
             addToast({
-              title: "Access Denied",
-              message: "Please use Hospital Sign-In to access admin features.",
-              type: "error",
+              title: "Login Successful",
+              message: "Redirecting to Hospital Dashboard...",
+              type: "success",
+              duration: 2000
             });
+            navigate("/hospital", { replace: true });
             return;
           }
 
@@ -297,14 +306,22 @@ export default function DocSignIn() {
           return;
         }
 
-        // Reject dual-role users (HOSPITAL_ADMIN + DOCTOR)
+        // Redirect Hospital Admins to Hospital Dashboard
         if (roles.includes("HOSPITAL_ADMIN")) {
           useDoctorAuthStore.getState().clearAuth();
+
+          const { setToken, setRoleNames, setUser } = useHospitalAuthStore.getState();
+          setToken(res.data.token);
+          setRoleNames(roles);
+          setUser(res.data.user);
+
           addToast({
-            title: "Access Denied",
-            message: "Please use Hospital Sign-In to access admin features.",
-            type: "error",
+            title: "Login Successful",
+            message: "Redirecting to Hospital Dashboard...",
+            type: "success",
+            duration: 2000
           });
+          navigate("/hospital", { replace: true });
           return;
         }
 

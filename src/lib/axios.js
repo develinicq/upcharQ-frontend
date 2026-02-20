@@ -6,7 +6,7 @@ import useSuperAdminAuthStore from "../store/useSuperAdminAuthStore";
 const raw = (import.meta.env.VITE_API_BASE_URL || '').trim();
 let baseURL;
 if (!raw) {
-  baseURL = '/api';
+  baseURL = 'http://localhost:3008/api';
 } else {
   const noTrail = raw.replace(/\/$/, '');
   // If already ends with /api or contains /api at the end, don't duplicate
@@ -68,23 +68,36 @@ axiosInstance.interceptors.request.use(
       // Priority logic based on current route/path to support multi-role users
       const path = typeof window !== 'undefined' ? window.location.pathname : '';
       const roleContext = config.roleContext; // Internal property, not a header
+
+      // Explicitly detect if this is a Super Admin endpoint (most reliable)
+      const isSuperAdminEndpoint = config.url && (
+        config.url.includes('/forSuperAdmin/') ||
+        config.url.includes('/for-super-admin/') ||
+        config.url.includes('BySuperAdmin') ||
+        config.url.includes('/rbac/')
+      );
+
       let token = null;
 
       // Disambiguate between modules using specific segment checks
       const isDoctorModule = roleContext === 'doctor' || path.startsWith('/doc/') || path === '/doc';
-      const isHospitalModule = roleContext === 'hospital' || path.startsWith('/hospital/') || path === '/hospital';
+      const isHospitalModule = roleContext === 'hospital' || (path.startsWith('/hospital/') && !isSuperAdminEndpoint) || path === '/hospital';
       const isHospitalFDModule = roleContext === 'hfd' || path.startsWith('/hfd/') || path === '/hfd';
       const isFrontDeskModule = roleContext === 'front-desk' || path.startsWith('/fd/') || path === '/fd';
 
-      // Disambiguate SuperAdmin: /doctor (SA) vs /doc (Doctor), /hospitals (SA) vs /hospital (Hospital)
-      const isSuperAdminRoute = roleContext === 'super-admin' || path === '/' || path.startsWith('/doctor') || path.startsWith('/hospitals') ||
-        path.startsWith('/patients') || path.startsWith('/dashboard') ||
+      // SuperAdmin routes: /hospitals (list), /hospital/:id (detail), /doctor (list), /doctor/:id (detail)
+      const isSuperAdminRoute = roleContext === 'super-admin' ||
+        isSuperAdminEndpoint ||
+        path === '/' ||
+        path.startsWith('/doctor') ||
+        path.startsWith('/hospitals') ||
+        path.startsWith('/patients') ||
+        path.startsWith('/dashboard') ||
         path.startsWith('/settings');
 
-      if (isSuperAdminRoute) {
+      if (isSuperAdminRoute || isSuperAdminEndpoint) {
         token = saToken || lsToken || genericToken;
       } else if (isFrontDeskModule) {
-        // Strictly prioritize FD token in FD module
         token = fdToken || genericToken || saToken || hToken || dToken || lsToken;
       } else if (isDoctorModule) {
         // Dual-role check: If signed in via Hospital but acting as Doctor, prefer Hospital token
@@ -94,7 +107,6 @@ axiosInstance.interceptors.request.use(
           token = dToken || fdToken || saToken || hToken || genericToken || lsToken;
         }
       } else if (isHospitalFDModule) {
-        // Strictly prioritize HFD token in HFD module
         token = hfdToken || hToken || saToken || dToken || genericToken || lsToken;
       } else if (isHospitalModule) {
         token = hToken || saToken || dToken || genericToken || lsToken;

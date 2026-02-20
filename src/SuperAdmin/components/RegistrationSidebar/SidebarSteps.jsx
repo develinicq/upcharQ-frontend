@@ -43,17 +43,6 @@ const doctorSteps = [
   },
   {
     id: 3,
-    title: "Documents Verification",
-    icon: (isCompleted, isCurrent) => (
-      <img
-        src={documentBlue}
-        className={`w-7 ${!isCompleted && !isCurrent ? 'grayscale opacity-50' : ''}`}
-        alt="Document"
-      />
-    )
-  },
-  {
-    id: 4,
     title: "Review & Create",
     icon: (isCompleted, isCurrent) => (
       <img
@@ -64,7 +53,7 @@ const doctorSteps = [
     )
   },
   {
-    id: 5,
+    id: 4,
     title: "Package & Payment",
     icon: (isCompleted, isCurrent) => (
       <img
@@ -75,7 +64,8 @@ const doctorSteps = [
     )
   },
   {
-    id: 6, title: "Registration Complete",
+    id: 5,
+    title: "Registration Complete",
     icon: (isCompleted, isCurrent) => (
       <img
         src={checkCircle}
@@ -85,6 +75,7 @@ const doctorSteps = [
     )
   },
 ];
+
 
 const hospitalSteps = [
   {

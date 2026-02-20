@@ -7,7 +7,7 @@ import InputWithMeta from "@/components/GeneralDrawer/InputWithMeta";
 import RichTextBox from "@/components/GeneralDrawer/RichTextBox";
 import Dropdown from "@/components/GeneralDrawer/Dropdown";
 import FileUploadBox from "@/components/GeneralDrawer/FileUploadBox";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
 import EditClinicDetailsDrawer from "../Drawers/EditClinicDetailsDrawer.jsx";
 import { Calendar as ShadcnCalendar } from "@/components/ui/calendar";
 import calendarWhite from "/Doctor_module/sidebar/calendar_white.png";
@@ -101,6 +101,8 @@ const Clinical = ({ doctor, onLoadingChange, cache = {}, updateCache }) => {
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [latLng, setLatLng] = useState({ lat: null, lng: null });
+
+  const [searchLocation, setSearchLocation] = useState("");
   const [showEstDateCalendar, setShowEstDateCalendar] = useState(false);
 
   // Dropdown states
@@ -156,9 +158,13 @@ const Clinical = ({ doctor, onLoadingChange, cache = {}, updateCache }) => {
           }
           if (typeof updateCache === 'function') updateCache({ clinic: data?.clinic, hasClinic: !!data?.hasClinic });
         }
-      } catch (e) {
+      } catch (err) {
         // non-blocking; keep UI based on doctor prop
-        console.warn("Failed to fetch clinical details:", e?.message || e);
+        console.warn("Failed to fetch clinical details for SuperAdmin:", {
+          status: err?.response?.status,
+          message: err?.response?.data?.message || err.message,
+          error: err
+        });
       } finally {
         if (!cancelled) setClinicalLoading(false);
       }
@@ -273,14 +279,7 @@ const Clinical = ({ doctor, onLoadingChange, cache = {}, updateCache }) => {
 
   return (
     <div className="p-4 grid grid-cols-12 gap-7 bg-secondary-grey50">
-      {showNoClinic ? (
-        <div className="col-span-12">
-          <div className="bg-white border border-secondary-grey100 rounded-lg p-8 text-center text-secondary-grey300">
-            No clinic found.
-          </div>
-        </div>
-      ) : (
-        <>
+
       {/* LEFT: Clinic Info */}
       <div className="col-span-12 xl:col-span-6">
         <SectionCard
@@ -399,20 +398,64 @@ const Clinical = ({ doctor, onLoadingChange, cache = {}, updateCache }) => {
               <InputWithMeta label="Clinic Photos" showInput={false}>
                 <div className="flex flex-wrap gap-4 mt-1 items-center">
                   {photos.map((key, idx) => (
-                    <div key={idx} className="relative w-[120px] h-[120px] bg-gray-100 rounded-md border border-gray-200 overflow-hidden">
+                    <div key={idx} className="relative w-[120px] h-[120px] bg-gray-100 rounded-md border border-gray-200 overflow-hidden group">
                       <img src={key} alt="Clinic" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPhotos(prev => prev.filter((_, i) => i !== idx)); // Remove by index
+                        }}
+                        className="absolute top-1 right-1 bg-white hover:bg-red-50 text-red-500 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                        title="Remove"
+                      >
+                        <X size={14} />
+                      </button>
                     </div>
                   ))}
-                  {/* Mock Upload Button to match UI */}
-                  <label className="w-[120px] h-[120px] border-dashed bg-blue-primary50 border-blue-primary150 border-[0.5px] rounded-md grid place-items-center text-blue-primary250 text-sm cursor-pointer">
-                    <div className="flex gap-1 items-center">
-                      <img src={upload} alt="Upload" className="w-4 h-4" />
-                      <span>Upload File</span>
-                    </div>
-                  </label>
+                  {/* Upload Button: Render only if fewer than 6 photos */}
+                  {photos.length < 6 && (
+                    <label className="w-[120px] h-[120px] border-dashed bg-blue-primary50 border-blue-primary150 border-[0.5px] rounded-md grid place-items-center text-blue-primary250 text-sm cursor-pointer hover:bg-blue-50 transition-colors">
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/png, image/jpeg, image/jpg, image/webp"
+                        className="hidden"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files);
+                          if (files.length === 0) return;
+
+                          // Check total count
+                          if (photos.length + files.length > 6) {
+                            alert("Maximum 6 photos allowed."); // Fallback alert
+                            // If you have toastStore, use it: toastStore.getState().addToast({ title: 'Limit Reached', message: 'Maximum 6 photos allowed.', type: 'warning' });
+                            return;
+                          }
+
+                          // Create object URLs for preview
+                          const newUrls = files.map(f => URL.createObjectURL(f));
+                          setPhotos(prev => [...prev, ...newUrls]);
+
+                          // Reset input value to allow re-upload if needed
+                          e.target.value = null;
+                        }}
+                      />
+                      <div className="flex gap-1 items-center flex-col justify-center text-center">
+                        <div className="flex items-center gap-1">
+                          <img src={upload} alt="Upload" className="w-4 h-4" />
+                          <span>Upload File</span>
+                        </div>
+                        <span className="text-[10px] text-blue-400 mt-1 font-normal">
+                          {photos.length < 2 ? "(Min 2 Photos)" : "(Max 6 Photos)"}
+                        </span>
+                      </div>
+                    </label>
+                  )}
                 </div>
-                <div className="text-[12px] text-secondary-grey200 mt-1">
-                  Support Size upto 2MB in .png, .jpg, .svg, .webp
+                <div className="text-[12px] text-secondary-grey200 mt-1 flex justify-between">
+                  <span>Support Size upto 2MB in .png, .jpg, .svg, .webp</span>
+                  <span className={`${photos.length < 2 ? "text-red-500" : "text-green-600"}`}>
+                    {photos.length} / 6
+                  </span>
                 </div>
               </InputWithMeta>
             </div>
@@ -429,7 +472,13 @@ const Clinical = ({ doctor, onLoadingChange, cache = {}, updateCache }) => {
           <div className="flex flex-col gap-4">
             {/* Map */}
             <div className="flex flex-col gap-2">
-              <InputWithMeta label="Map Location" infoIcon placeholder="Search Location"></InputWithMeta>
+              <InputWithMeta
+                label="Map Location"
+                infoIcon
+                placeholder="Search Location"
+                value={searchLocation}
+                onChange={setSearchLocation}
+              />
               <div className="h-[110px] rounded overflow-hidden border">
                 <MapLocation
                   heightClass="h-full"
@@ -473,7 +522,46 @@ const Clinical = ({ doctor, onLoadingChange, cache = {}, updateCache }) => {
                   infoIcon
                   requiredDot
                   value={pincode}
-                  onChange={(v) => setPincode(v.replace(/[^0-9]/g, "").slice(0, 6))}
+                  onChange={(v) => {
+                    const raw = v.replace(/[^0-9]/g, "").slice(0, 6);
+                    setPincode(raw);
+                    // Mock auto-fetch for demo if API key not set or for instant feedback
+                    if (raw.length === 6) {
+                      // Fetch logic would go here. For now, simulate a match for common codes or just existing behavior.
+                      // Real implementation:
+                      /*
+                      fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${raw}&key=YOUR_API_KEY`)
+                        .then(r => r.json())
+                        .then(d => {
+                          if (d.results?.[0]) {
+                            const loc = d.results[0].geometry.location;
+                            setLatLng({ lat: loc.lat, lng: loc.lng });
+                            // Parse components for city/state
+                          }
+                        })
+                      */
+
+                      // SIMULATED AUTO-FILL for UI DEMO
+                      if (raw === "444001") {
+                        setCity("Akola");
+                        setState("Maharashtra");
+                        setLatLng({ lat: 20.7002, lng: 77.0082 });
+                        setSearchLocation("Akola, Maharashtra");
+                      }
+                      else if (raw === "400001") {
+                        setCity("Mumbai");
+                        setState("Maharashtra");
+                        setLatLng({ lat: 18.9389, lng: 72.8354 });
+                        setSearchLocation("Mumbai, Maharashtra");
+                      }
+                      else if (raw === "110001") {
+                        setCity("New Delhi");
+                        setState("Delhi");
+                        setLatLng({ lat: 28.6331, lng: 77.2191 });
+                        setSearchLocation("New Delhi, Delhi");
+                      }
+                    }
+                  }}
                   placeholder="Pincode"
                 />
               </div>
@@ -537,8 +625,7 @@ const Clinical = ({ doctor, onLoadingChange, cache = {}, updateCache }) => {
           </div>
         </SectionCard>
       </div>
-        </>
-      )}
+
     </div>
   );
 };

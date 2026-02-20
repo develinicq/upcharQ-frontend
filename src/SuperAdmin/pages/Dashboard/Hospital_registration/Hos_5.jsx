@@ -252,31 +252,40 @@ const Hos_5 = () => {
 
       {/* Image Banner */}
       <div className='relative' >
-        <div className="h-[140px] w-full bg-secondary-grey50 rounded-xl overflow-hidden">
+        <div className="h-[140px] w-full bg-secondary-grey50 rounded-xl overflow-hidden flex items-center justify-center">
           {imagesLoading ? (
             <div className="w-full h-full flex items-center justify-center">
               <UniversalLoader size={24} />
             </div>
-          ) : (
+          ) : coverImageUrl ? (
             <img
               className='h-full w-full object-cover'
-              src={coverImageUrl || "/images/hospital.png"}
+              src={coverImageUrl}
               alt="Hospital Cover"
             />
+          ) : (
+            <div className="flex flex-col items-center justify-center text-secondary-grey300">
+              <span className="text-3xl">🏥</span>
+              <span className="text-xs">No Cover Image</span>
+            </div>
           )}
         </div>
 
-        <div className='absolute w-12 h-12 right-1/2 -bottom-1 border-[1px] border-[#2372EC] rounded-md translate-x-1/2 bg-white overflow-hidden'>
+        <div className='absolute w-12 h-12 right-1/2 -bottom-1 border-[1px] border-[#2372EC] rounded-md translate-x-1/2 bg-white overflow-hidden flex items-center justify-center'>
           {imagesLoading ? (
             <div className="w-full h-full flex items-center justify-center">
               <UniversalLoader size={12} />
             </div>
-          ) : (
+          ) : profileImageUrl ? (
             <img
-              src={profileImageUrl || "/images/hospital_logo.png"}
+              src={profileImageUrl}
               className='w-full h-full object-cover rounded-md'
               alt="Hospital Profile"
             />
+          ) : (
+            <div className="flex items-center justify-center w-full h-full bg-secondary-grey50 text-secondary-grey300">
+              <span className="text-[8px] font-bold">Logo</span>
+            </div>
           )}
         </div>
         <div className='bg-white h-5'></div>
@@ -293,8 +302,8 @@ const Hos_5 = () => {
             <DetailRow label="Address" value={hospitalDisplay.address} alignItems="items-start" />
           </div>
           <div className='flex flex-col'>
-            <DetailRow label="Hospital Email" value={hospitalDisplay.email} type="done" />
-            <DetailRow label="Hospital Contact" value={hospitalDisplay.contact} type="done" />
+            <DetailRow label="Hospital Email" value={hospitalDisplay.email} />
+            <DetailRow label="Hospital Contact" value={hospitalDisplay.contact} />
             <DetailRow label="Rohini ID" value={hospitalDisplay.rohiniId} />
             <DetailRow label="Website" value={hospitalDisplay.website} />
             <DetailRow label="Upchar ID" value={hospitalDisplay.upcharId} />
@@ -326,8 +335,8 @@ const Hos_5 = () => {
             <DetailRow label="User Role" value={adminDisplay.role} />
           </div>
           <div className='flex flex-col'>
-            <DetailRow label="User Email" value={adminDisplay.email} type="done" />
-            <DetailRow label="User Contact" value={adminDisplay.contact} type="done" />
+            <DetailRow label="User Email" value={adminDisplay.email} />
+            <DetailRow label="User Contact" value={adminDisplay.contact} />
             <DetailRow label="MFA Status" value={<span className='text-green-600'>{adminDisplay.mfaStatus}</span>} type="" />
           </div>
         </div>
@@ -401,20 +410,7 @@ const Hos_5 = () => {
           confirmText="I understand and will comply with the Data Privacy Agreement"
         />
 
-        <div className="flex justify-between items-center">
-          <div className="flex flex-col">
-            <div className='flex gap-1 items-center'>
-              <h3 className="text-sm font-semibold text-secondary-grey400">Digital Signature</h3>
-              <div className='w-1 h-1 bg-red-500 rounded-full'></div>
-            </div>
-            <p className="text-secondary-grey300 text-xs mb-4">Sign digitally using Aadhar eSign and Upload Pan card</p>
-          </div>
 
-          <div className="flex gap-4 items-center">
-            <ActionButton variant="pancard" className='h-8'>Use Aadhar eSign</ActionButton>
-            <ActionButton variant="pancard" className='h-8'>Upload Pancard</ActionButton>
-          </div>
-        </div>
       </div>
     </div>
   );

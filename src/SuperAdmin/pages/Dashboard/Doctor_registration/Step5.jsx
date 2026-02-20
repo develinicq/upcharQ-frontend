@@ -470,7 +470,7 @@ const plans = [
       </svg>
     ),
     features: [
-      "1 Doctor + 1 Staff",
+      "2 Doctors + 1 Staff",
       "Unlimited Online and Walk-ins Appts",
       "Queue Management System",
       "Front Desk Access",
@@ -746,7 +746,7 @@ const plans = [
       </svg>
     ),
     features: [
-      "1 Doctor + 1 Staff",
+      "2 Doctors + 1 Staff",
       "Unlimited Online and Walk-ins Appts",
       "Personalized Dashboard",
       "Queue Management System",
@@ -956,7 +956,7 @@ const plans = [
       </svg>
     ),
     features: [
-      "1 Doctor + 2 Staff",
+      "2 Doctors + 2 Staff",
       "Unlimited Online and Walk-ins Appts",
       "Personalized Dashboard",
       "Queue Management System",
@@ -975,10 +975,10 @@ const Step5 = forwardRef((props, ref) => {
   const { currentStep, nextStep, prevStep, updateFormData, formData } = useRegistration();
 
   const currentSubStep = formData.step5SubStep || 1;
-  const [selectedPlan, setSelectedPlan] = useState("trial");
-  const [billingCycle, setBillingCycle] = useState("monthly");
-  const [doctors, setDoctors] = useState(1);
-  const [staff, setStaff] = useState(1);
+  const [selectedPlan, setSelectedPlan] = useState(formData.selectedPlan || "trial");
+  const [billingCycle, setBillingCycle] = useState(formData.billingCycle || "monthly");
+  const [doctors, setDoctors] = useState(formData.doctorsCount || (formData.selectedPlan === "trial" ? 1 : 2));
+  const [staff, setStaff] = useState(formData.staffCount || 1);
   const [loading, setLoading] = useState(false);
   const [isPlanOpen, setIsPlanOpen] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -1002,11 +1002,21 @@ const Step5 = forwardRef((props, ref) => {
     if (openInfoPlanId !== null) {
       document.addEventListener("mousedown", handleClickOutside);
     }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [openInfoPlanId]);
+
+  // Sync with global formData
+  useEffect(() => {
+    updateFormData({
+      selectedPlan,
+      billingCycle,
+      doctorsCount: doctors,
+      staffCount: staff,
+      agreedToTerms
+    });
+  }, [selectedPlan, billingCycle, doctors, staff, agreedToTerms, updateFormData]);
+
+
 
   useImperativeHandle(ref, () => ({
     submit: async () => {
@@ -1030,15 +1040,9 @@ const Step5 = forwardRef((props, ref) => {
 
       try {
         setLoading(true);
-        console.log("Activating doctor via Step5 (Confirm) with ID:", userId);
 
         // For testing purposes, if userId is mock, bypass real API call
-        if (userId === 'TEST_DOC_123') {
-          await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate delay
-          addToast({ title: 'Success', message: 'Account activated successfully! (Test Mode)', type: 'success' });
-          setLoading(false);
-          return true;
-        }
+
 
         const res = await activateDoctor(userId);
 
@@ -1063,6 +1067,16 @@ const Step5 = forwardRef((props, ref) => {
   const selectedPlanData = plans.find((p) => p.id === selectedPlan) || plans[0];
   const availablePlans = plans.filter(p => p.id !== 'trial');
 
+  // When plan changes, update counts
+  useEffect(() => {
+    if (selectedPlan === "trial") {
+      setDoctors(1);
+    } else {
+      setDoctors(2);
+    }
+
+  }, [selectedPlan]);
+
   // Pricing calculations
   const getBasePrice = () => {
     if (selectedPlan === 'trial') return 0;
@@ -1072,7 +1086,16 @@ const Step5 = forwardRef((props, ref) => {
     return 0;
   };
 
-  const basePrice = getBasePrice();
+  const planPrice = getBasePrice();
+
+  // Extra Add-ons
+  // Ensure we don't charge for the included doctor/staff if they are part of the plan price
+  // But plan details say "1 Doctor + 1 Staff". So (doctors - 1) is correct.
+  const extraDoctorCost = Math.max(0, doctors - 1) * 1299;
+  const extraStaffCost = Math.max(0, staff - 1) * 399;
+
+  const basePrice = planPrice + extraDoctorCost + extraStaffCost;
+
   const months = billingCycle === 'yearly' ? 12 : billingCycle === 'halfYearly' ? 6 : 1;
   const freeMonths = billingCycle === 'yearly' ? 2 : billingCycle === 'halfYearly' ? 1 : 0;
 
@@ -1142,269 +1165,274 @@ const Step5 = forwardRef((props, ref) => {
 
   const renderPage1 = () => {
     return (
-      <main className="flex-1 overflow-hidden p-4">
-        <div className="max-w-7xl mx-auto flex flex-col h-full">
+      <main className="flex-1 flex flex-col overflow-hidden bg-slate-50/50">
+        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+          <div className="max-w-7xl mx-auto">
 
 
-          {/* Billing Tabs */}
-          <div className="flex items-center justify-center mb-3 mx-auto px-2">
-            <div className="flex items-center justify-center bg-blue-primary50  rounded">
-              <button
-                onClick={() => setBillingCycle("monthly")}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${billingCycle === "monthly"
-                  ? "bg-blue-primary250 text-monochrom-white"
-                  : "text-secondary-grey300"
-                  }`}
-              >
-                Billed Monthly
-              </button>
-              <button
-                onClick={() => setBillingCycle("halfYearly")}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${billingCycle === "halfYearly"
-                  ? "bg-blue-primary250 text-monochrom-white"
-                  : "text-secondary-grey300"
-                  }`}
-              >
-                Billed Half-Yearly
-              </button>
-              <button
-                onClick={() => setBillingCycle("yearly")}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${billingCycle === "yearly"
-                  ? "bg-blue-primary250 text-monochrom-white"
-                  : "text-secondary-grey300"
-                  }`}
-              >
-                Billed Annually
-              </button>
+            {/* Billing Tabs */}
+            <div className="flex items-center justify-center mb-3 mx-auto px-2">
+              <div className="flex items-center justify-center bg-blue-primary50  rounded">
+                <button
+                  onClick={() => setBillingCycle("monthly")}
+                  className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${billingCycle === "monthly"
+                    ? "bg-blue-primary250 text-monochrom-white"
+                    : "text-secondary-grey300"
+                    }`}
+                >
+                  Billed Monthly
+                </button>
+                <button
+                  onClick={() => setBillingCycle("halfYearly")}
+                  className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${billingCycle === "halfYearly"
+                    ? "bg-blue-primary250 text-monochrom-white"
+                    : "text-secondary-grey300"
+                    }`}
+                >
+                  Billed Half-Yearly
+                </button>
+                <button
+                  onClick={() => setBillingCycle("yearly")}
+                  className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${billingCycle === "yearly"
+                    ? "bg-blue-primary250 text-monochrom-white"
+                    : "text-secondary-grey300"
+                    }`}
+                >
+                  Billed Annually
+                </button>
+              </div>
+              <span className="text-xs text-blue-primary250 font-medium flex items-center">
+                <svg
+                  width="31"
+                  height="25"
+                  viewBox="0 0 31 25"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M27.2261 17.5707C23.7206 18.4446 19.535 18.6106 16.4543 16.4036C14.4856 14.9931 13.4401 12.141 14.1759 9.82602C14.8708 7.63968 16.4935 5.7187 18.9251 5.77725C20.1926 5.80777 21.2854 6.3909 21.5161 7.72568C21.8686 9.7649 19.8343 11.8752 18.2169 12.7622C13.1692 15.5305 6.02848 15.3764 1.21995 12.1632"
+                    stroke="#2372EC"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    d="M3.33871 15.9293C2.75053 15.1074 1.46612 13.19 1.03389 12.0957"
+                    stroke="#2372EC"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    d="M1.03402 12.0958C2.036 11.9636 4.31355 11.5911 5.40788 11.1589"
+                    stroke="#2372EC"
+                    stroke-linecap="round"
+                  />
+                </svg>
+                Get 2 Months Free😍
+              </span>
             </div>
-            <span className="text-xs text-blue-primary250 font-medium flex items-center">
-              <svg
-                width="31"
-                height="25"
-                viewBox="0 0 31 25"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M27.2261 17.5707C23.7206 18.4446 19.535 18.6106 16.4543 16.4036C14.4856 14.9931 13.4401 12.141 14.1759 9.82602C14.8708 7.63968 16.4935 5.7187 18.9251 5.77725C20.1926 5.80777 21.2854 6.3909 21.5161 7.72568C21.8686 9.7649 19.8343 11.8752 18.2169 12.7622C13.1692 15.5305 6.02848 15.3764 1.21995 12.1632"
-                  stroke="#2372EC"
-                  stroke-linecap="round"
-                />
-                <path
-                  d="M3.33871 15.9293C2.75053 15.1074 1.46612 13.19 1.03389 12.0957"
-                  stroke="#2372EC"
-                  stroke-linecap="round"
-                />
-                <path
-                  d="M1.03402 12.0958C2.036 11.9636 4.31355 11.5911 5.40788 11.1589"
-                  stroke="#2372EC"
-                  stroke-linecap="round"
-                />
-              </svg>
-              Get 2 Months Free😍
-            </span>
-          </div>
 
-          {/* Plans Grid */}
-          <div className="flex-1 overflow-y-auto no-scrollbar ">
-            <div className="grid grid-cols-2 max-w-3xl mx-auto gap-6 pb-2">
-              {plans.map((plan) => {
-                const isSelected = selectedPlan === plan.id;
-                const isTrial = plan.id === "trial";
+            {/* Plans Grid */}
+            <div className="flex-1 overflow-y-auto no-scrollbar ">
+              <div className="grid grid-cols-2 max-w-3xl mx-auto gap-6 pb-2">
+                {plans.map((plan) => {
+                  const isSelected = selectedPlan === plan.id;
+                  const isTrial = plan.id === "trial";
 
-                return (
-                  <div
-                    key={plan.id}
-                    onClick={() => setSelectedPlan(plan.id)}
-                    className={`relative rounded-lg border cursor-pointer transition-all border-blue-primary400 p-4 ${isSelected
-                      ? " bg-blue-primary250 text-monochrom-white"
-                      : "bg-card hover:border-blue-primary150"
-                      }`}
-                  >
-                    {/* Plan Icon & Name & Price */}
-                    <div className="flex items-center gap-2 mb-3">
-                      {plan.icon && (
-                        <div className="w-12 h-12">{plan.icon}</div>
-                      )}
+                  return (
+                    <div
+                      key={plan.id}
+                      onClick={() => setSelectedPlan(plan.id)}
+                      className={`relative rounded-lg border cursor-pointer transition-all border-blue-primary400 p-4 ${isSelected
+                        ? " bg-blue-primary250 text-monochrom-white"
+                        : "bg-card hover:border-blue-primary150"
+                        }`}
+                    >
+                      {/* Plan Icon & Name & Price */}
+                      <div className="flex items-center gap-2 mb-3">
+                        {plan.icon && (
+                          <div className="w-12 h-12">{plan.icon}</div>
+                        )}
 
-                      <div className="flex flex-col">
-                        <h3
-                          className={`text-sm font-semibold ${isSelected
-                            ? "text-monochrom-white"
-                            : "text-secondary-grey300"
-                            }`}
-                        >
-                          {plan.name}
-                        </h3>
-                        {isTrial ? (
-                          <p
-                            className={`text-xl font-bold ${isSelected
+                        <div className="flex flex-col">
+                          <h3
+                            className={`text-sm font-semibold ${isSelected
                               ? "text-monochrom-white"
-                              : "text-blue-primary250"
+                              : "text-secondary-grey300"
                               }`}
                           >
-                            {plan.price}
-                          </p>
-                        ) : (
-                          <div className="flex items-baseline gap-1">
-                            <span
+                            {plan.name}
+                          </h3>
+                          {isTrial ? (
+                            <p
                               className={`text-xl font-bold ${isSelected
                                 ? "text-monochrom-white"
                                 : "text-blue-primary250"
                                 }`}
                             >
                               {plan.price}
-                            </span>
-                            <span
-                              className={`text-xl font-bold ${isSelected
-                                ? "text-monochrom-white/80"
-                                : "text-blue-primary250"
-                                }`}
-                            >
-                              {plan.period}
-                            </span>
-                            <span
-                              className={`text-xs ${isSelected
-                                ? "text-monochrom-white/60"
-                                : "text-secondary-grey200"
-                                }`}
-                            >
-                              {plan.taxNote}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Select Button */}
-                    {isSelected ? (
-                      <button className="w-full py-2 bg-monochrom-white text-blue-primary250 rounded-md text-sm font-medium flex items-center justify-center gap-2">
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 16 16"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            d="M6.02087 7.97994C5.82561 7.78468 5.50903 7.78468 5.31376 7.97994C5.1185 8.1752 5.1185 8.49179 5.31376 8.68705L5.66732 8.3335L6.02087 7.97994ZM7.00065 9.66683L6.6471 10.0204C6.84236 10.2156 7.15894 10.2156 7.3542 10.0204L7.00065 9.66683ZM10.6875 6.68705C10.8828 6.49179 10.8828 6.1752 10.6875 5.97994C10.4923 5.78468 10.1757 5.78468 9.98043 5.97994L10.334 6.3335L10.6875 6.68705ZM14.6673 8.00016H14.1673C14.1673 11.4059 11.4064 14.1668 8.00065 14.1668V14.6668V15.1668C11.9587 15.1668 15.1673 11.9582 15.1673 8.00016H14.6673ZM8.00065 14.6668V14.1668C4.59489 14.1668 1.83398 11.4059 1.83398 8.00016H1.33398H0.833984C0.833984 11.9582 4.04261 15.1668 8.00065 15.1668V14.6668ZM1.33398 8.00016H1.83398C1.83398 4.59441 4.59489 1.8335 8.00065 1.8335V1.3335V0.833496C4.04261 0.833496 0.833984 4.04212 0.833984 8.00016H1.33398ZM8.00065 1.3335V1.8335C11.4064 1.8335 14.1673 4.59441 14.1673 8.00016H14.6673H15.1673C15.1673 4.04212 11.9587 0.833496 8.00065 0.833496V1.3335ZM5.66732 8.3335L5.31376 8.68705L6.6471 10.0204L7.00065 9.66683L7.3542 9.31328L6.02087 7.97994L5.66732 8.3335ZM7.00065 9.66683L7.3542 10.0204L10.6875 6.68705L10.334 6.3335L9.98043 5.97994L6.6471 9.31328L7.00065 9.66683Z"
-                            fill="#2372EC"
-                          />
-                        </svg>
-                        Selected
-                      </button>
-                    ) : (
-                      <button className="w-full py-2 bg-blue-primary250 hover:bg-blue-primary300 text-monochrom-white rounded-md text-sm font-medium">
-                        Choose
-                      </button>
-                    )}
-
-                    {/* Features */}
-                    <div className="mt-4">
-                      <p
-                        className={`text-xs mb-2 ${isSelected
-                          ? "text-monochrom-white/80"
-                          : "text-secondary-grey200"
-                          }`}
-                      >
-                        Access To:
-                      </p>
-                      <ul className="space-y-2">
-                        {plan.features.slice(0, 8).map((feature, idx) => (
-                          <li
-                            key={idx}
-                            className="flex items-center gap-2 justify-between text-sm"
-                          >
-                            <div className="flex items-center gap-2">
+                            </p>
+                          ) : (
+                            <div className="flex items-baseline gap-1">
                               <span
-                                className={`w-4 h-4 rounded-full flex items-center justify-center text-xs ${isSelected ? " " : ""
+                                className={`text-xl font-bold ${isSelected
+                                  ? "text-monochrom-white"
+                                  : "text-blue-primary250"
                                   }`}
                               >
-                                <svg
-                                  width="16"
-                                  height="16"
-                                  viewBox="0 0 16 16"
-                                  fill="none"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <path
-                                    d="M7.99967 14.6666C11.6816 14.6666 14.6663 11.6819 14.6663 7.99998C14.6663 4.31808 11.6816 1.33331 7.99967 1.33331C4.31778 1.33331 1.33301 4.31808 1.33301 7.99998C1.33301 11.6819 4.31778 14.6666 7.99967 14.6666Z"
-                                    fill="#F2F7FF"
-                                  />
-                                  <path
-                                    d="M5.66634 8.33331L6.99967 9.66665L10.333 6.33331"
-                                    fill="#F2F7FF"
-                                  />
-                                  <path
-                                    d="M6.01989 7.97976C5.82463 7.7845 5.50805 7.7845 5.31279 7.97976C5.11753 8.17502 5.11753 8.4916 5.31279 8.68687L5.66634 8.33331L6.01989 7.97976ZM6.99967 9.66665L6.64612 10.0202C6.84138 10.2155 7.15797 10.2155 7.35323 10.0202L6.99967 9.66665ZM10.6866 6.68687C10.8818 6.4916 10.8818 6.17502 10.6866 5.97976C10.4913 5.7845 10.1747 5.7845 9.97945 5.97976L10.333 6.33331L10.6866 6.68687ZM14.6663 7.99998H14.1663C14.1663 11.4057 11.4054 14.1666 7.99967 14.1666V14.6666V15.1666C11.9577 15.1666 15.1663 11.958 15.1663 7.99998H14.6663ZM7.99967 14.6666V14.1666C4.59392 14.1666 1.83301 11.4057 1.83301 7.99998H1.33301H0.833008C0.833008 11.958 4.04163 15.1666 7.99967 15.1666V14.6666ZM1.33301 7.99998H1.83301C1.83301 4.59422 4.59392 1.83331 7.99967 1.83331V1.33331V0.833313C4.04163 0.833313 0.833008 4.04194 0.833008 7.99998H1.33301ZM7.99967 1.33331V1.83331C11.4054 1.83331 14.1663 4.59422 14.1663 7.99998H14.6663H15.1663C15.1663 4.04194 11.9577 0.833313 7.99967 0.833313V1.33331ZM5.66634 8.33331L5.31279 8.68687L6.64612 10.0202L6.99967 9.66665L7.35323 9.31309L6.01989 7.97976L5.66634 8.33331ZM6.99967 9.66665L7.35323 10.0202L10.6866 6.68687L10.333 6.33331L9.97945 5.97976L6.64612 9.31309L6.99967 9.66665Z"
-                                    fill="#2372EC"
-                                  />
-                                </svg>
+                                {plan.price}
                               </span>
                               <span
-                                className={
-                                  isSelected
-                                    ? "text-monochrom-white"
-                                    : "text-secondary-grey300"
-                                }
+                                className={`text-xl font-bold ${isSelected
+                                  ? "text-monochrom-white/80"
+                                  : "text-blue-primary250"
+                                  }`}
                               >
-                                {feature}
+                                {plan.period}
+                              </span>
+                              <span
+                                className={`text-xs ${isSelected
+                                  ? "text-monochrom-white/60"
+                                  : "text-secondary-grey200"
+                                  }`}
+                              >
+                                {plan.taxNote}
                               </span>
                             </div>
-                            {idx === 0 && plan.id !== "trial" && (
-                              <div
-                                className="relative"
-                                ref={
-                                  openInfoPlanId === plan.id ? popupRef : null
-                                }
-                              >
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setOpenInfoPlanId((prev) =>
-                                      prev === plan.id ? null : plan.id
-                                    );
-                                  }}
-                                  className="p-1 rounded"
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Select Button */}
+                      {isSelected ? (
+                        <button className="w-full py-2 bg-monochrom-white text-blue-primary250 rounded-md text-sm font-medium flex items-center justify-center gap-2">
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 16 16"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              d="M6.02087 7.97994C5.82561 7.78468 5.50903 7.78468 5.31376 7.97994C5.1185 8.1752 5.1185 8.49179 5.31376 8.68705L5.66732 8.3335L6.02087 7.97994ZM7.00065 9.66683L6.6471 10.0204C6.84236 10.2156 7.15894 10.2156 7.3542 10.0204L7.00065 9.66683ZM10.6875 6.68705C10.8828 6.49179 10.8828 6.1752 10.6875 5.97994C10.4923 5.78468 10.1757 5.78468 9.98043 5.97994L10.334 6.3335L10.6875 6.68705ZM14.6673 8.00016H14.1673C14.1673 11.4059 11.4064 14.1668 8.00065 14.1668V14.6668V15.1668C11.9587 15.1668 15.1673 11.9582 15.1673 8.00016H14.6673ZM8.00065 14.6668V14.1668C4.59489 14.1668 1.83398 11.4059 1.83398 8.00016H1.33398H0.833984C0.833984 11.9582 4.04261 15.1668 8.00065 15.1668V14.6668ZM1.33398 8.00016H1.83398C1.83398 4.59441 4.59489 1.8335 8.00065 1.8335V1.3335V0.833496C4.04261 0.833496 0.833984 4.04212 0.833984 8.00016H1.33398ZM8.00065 1.3335V1.8335C11.4064 1.8335 14.1673 4.59441 14.1673 8.00016H14.6673H15.1673C15.1673 4.04212 11.9587 0.833496 8.00065 0.833496V1.3335ZM5.66732 8.3335L5.31376 8.68705L6.6471 10.0204L7.00065 9.66683L7.3542 9.31328L6.02087 7.97994L5.66732 8.3335ZM7.00065 9.66683L7.3542 10.0204L10.6875 6.68705L10.334 6.3335L9.98043 5.97994L6.6471 9.31328L7.00065 9.66683Z"
+                              fill="#2372EC"
+                            />
+                          </svg>
+                          Selected
+                        </button>
+                      ) : (
+                        <button className="w-full py-2 bg-blue-primary250 hover:bg-blue-primary300 text-monochrom-white rounded-md text-sm font-medium">
+                          Choose
+                        </button>
+                      )}
+
+                      {/* Features */}
+                      <div className="mt-4">
+                        <p
+                          className={`text-xs mb-2 ${isSelected
+                            ? "text-monochrom-white/80"
+                            : "text-secondary-grey200"
+                            }`}
+                        >
+                          Access To:
+                        </p>
+                        <ul className="space-y-2">
+                          {plan.features.slice(0, 8).map((feature, idx) => (
+                            <li
+                              key={idx}
+                              className="flex items-center gap-2 justify-between text-sm"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`w-4 h-4 rounded-full flex items-center justify-center text-xs ${isSelected ? " " : ""
+                                    }`}
                                 >
                                   <svg
-                                    width="15"
-                                    height="15"
-                                    viewBox="0 0 15 15"
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 16 16"
                                     fill="none"
                                     xmlns="http://www.w3.org/2000/svg"
-                                    className={
-                                      isSelected
-                                        ? "stroke-monochrom-white"
-                                        : "stroke-secondary-grey300"
-                                    }
                                   >
                                     <path
-                                      d="M7.16667 10.5V6.5M7.16667 4.83333V4.5M13.8333 7.16667C13.8333 10.8486 10.8486 13.8333 7.16667 13.8333C3.48477 13.8333 0.5 10.8486 0.5 7.16667C0.5 3.48477 3.48477 0.5 7.16667 0.5C10.8486 0.5 13.8333 3.48477 13.8333 7.16667Z"
-                                      strokeWidth="1.2"
-                                      strokeLinecap="round"
+                                      d="M7.99967 14.6666C11.6816 14.6666 14.6663 11.6819 14.6663 7.99998C14.6663 4.31808 11.6816 1.33331 7.99967 1.33331C4.31778 1.33331 1.33301 4.31808 1.33301 7.99998C1.33301 11.6819 4.31778 14.6666 7.99967 14.6666Z"
+                                      fill="#F2F7FF"
+                                    />
+                                    <path
+                                      d="M5.66634 8.33331L6.99967 9.66665L10.333 6.33331"
+                                      fill="#F2F7FF"
+                                    />
+                                    <path
+                                      d="M6.01989 7.97976C5.82463 7.7845 5.50805 7.7845 5.31279 7.97976C5.11753 8.17502 5.11753 8.4916 5.31279 8.68687L5.66634 8.33331L6.01989 7.97976ZM6.99967 9.66665L6.64612 10.0202C6.84138 10.2155 7.15797 10.2155 7.35323 10.0202L6.99967 9.66665ZM10.6866 6.68687C10.8818 6.4916 10.8818 6.17502 10.6866 5.97976C10.4913 5.7845 10.1747 5.7845 9.97945 5.97976L10.333 6.33331L10.6866 6.68687ZM14.6663 7.99998H14.1663C14.1663 11.4057 11.4054 14.1666 7.99967 14.1666V14.6666V15.1666C11.9577 15.1666 15.1663 11.958 15.1663 7.99998H14.6663ZM7.99967 14.6666V14.1666C4.59392 14.1666 1.83301 11.4057 1.83301 7.99998H1.33301H0.833008C0.833008 11.958 4.04163 15.1666 7.99967 15.1666V14.6666ZM1.33301 7.99998H1.83301C1.83301 4.59422 4.59392 1.83331 7.99967 1.83331V1.33331V0.833313C4.04163 0.833313 0.833008 4.04194 0.833008 7.99998H1.33301ZM7.99967 1.33331V1.83331C11.4054 1.83331 14.1663 4.59422 14.1663 7.99998H14.6663H15.1663C15.1663 4.04194 11.9577 0.833313 7.99967 0.833313V1.33331ZM5.66634 8.33331L5.31279 8.68687L6.64612 10.0202L6.99967 9.66665L7.35323 9.31309L6.01989 7.97976L5.66634 8.33331ZM6.99967 9.66665L7.35323 10.0202L10.6866 6.68687L10.333 6.33331L9.97945 5.97976L6.64612 9.31309L6.99967 9.66665Z"
+                                      fill="#2372EC"
                                     />
                                   </svg>
-                                </button>
-
-                                {openInfoPlanId === plan.id && (
-                                  <AddOnPricingPopup />
-                                )}
+                                </span>
+                                <span
+                                  className={
+                                    isSelected
+                                      ? "text-monochrom-white"
+                                      : "text-secondary-grey300"
+                                  }
+                                >
+                                  {feature}
+                                </span>
                               </div>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+                              {idx === 0 && plan.id !== "trial" && (
+                                <div
+                                  className="relative"
+                                  ref={
+                                    openInfoPlanId === plan.id ? popupRef : null
+                                  }
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setOpenInfoPlanId((prev) =>
+                                        prev === plan.id ? null : plan.id
+                                      );
+                                    }}
+                                    className="p-1 rounded"
+                                  >
+                                    <svg
+                                      width="15"
+                                      height="15"
+                                      viewBox="0 0 15 15"
+                                      fill="none"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      className={
+                                        isSelected
+                                          ? "stroke-monochrom-white"
+                                          : "stroke-secondary-grey300"
+                                      }
+                                    >
+                                      <path
+                                        d="M7.16667 10.5V6.5M7.16667 4.83333V4.5M13.8333 7.16667C13.8333 10.8486 10.8486 13.8333 7.16667 13.8333C3.48477 13.8333 0.5 10.8486 0.5 7.16667C0.5 3.48477 3.48477 0.5 7.16667 0.5C10.8486 0.5 13.8333 3.48477 13.8333 7.16667Z"
+                                        strokeWidth="1.2"
+                                        strokeLinecap="round"
+                                      />
+                                    </svg>
+                                  </button>
 
-          {/* Doctor/Staff Counter */}
-          <div className="flex flex-wrap gap-8 border-t border-border pt-1 pr-4">
+                                  {openInfoPlanId === plan.id && (
+                                    <AddOnPricingPopup />
+                                  )}
+                                </div>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Doctor/Staff Counter (Fixed) */}
+        <div className="bg-white border-t border-border p-4 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] shrink-0 z-10">
+          <div className="max-w-7xl mx-auto flex flex-wrap gap-8 items-center justify-between">
             {/* Doctors */}
             <div>
               <p className="text-sm text-secondary-grey300 mb-1 mt-1">
@@ -1413,10 +1441,10 @@ const Step5 = forwardRef((props, ref) => {
 
               <div className="flex items-center gap-2">
                 <button
-                  disabled={doctors === 1}
-                  onClick={() => setDoctors(doctors - 1)}
+                  disabled={selectedPlan === 'trial' ? doctors <= 1 : doctors <= 2}
+                  onClick={() => setDoctors(Math.max(selectedPlan === 'trial' ? 1 : 2, doctors - 1))}
                   className={`w-8 h-8 rounded border flex items-center justify-center
-        ${doctors === 1
+        ${(selectedPlan === 'trial' ? doctors <= 1 : doctors <= 2)
                       ? "border-secondary-grey100 text-secondary-grey150 cursor-not-allowed"
                       : "border-border text-secondary-grey300 hover:bg-muted"
                     }`}
@@ -1429,10 +1457,10 @@ const Step5 = forwardRef((props, ref) => {
                 </span>
 
                 <button
-                  disabled={doctors === 2}
-                  onClick={() => setDoctors(doctors + 1)}
+                  disabled={selectedPlan === 'trial' || doctors >= 4}
+                  onClick={() => setDoctors(Math.min(4, doctors + 1))}
                   className={`w-8 h-8 rounded border flex items-center justify-center
-        ${doctors === 2
+        ${selectedPlan === 'trial' || doctors >= 4
                       ? "border-secondary-grey100 text-secondary-grey150 cursor-not-allowed"
                       : "border-border text-secondary-grey300 hover:bg-muted"
                     }`}
@@ -1481,24 +1509,52 @@ const Step5 = forwardRef((props, ref) => {
 
             {/* Estimate Invoice */}
             <div className="ml-auto text-right flex flex-col gap-[1px]">
-              <p className="text-sm text-secondary-grey300">
-                Estimate invoice{" "}
-                <span className="text-secondary-grey200">
-                  ({selectedPlanData?.name || "Upchar-Q Free"})
-                </span>
-              </p>
-              <p className="text-xs text-secondary-grey200">
-                (₹2,299 Package Price + ₹414 taxes)
-              </p>
-              <p className="text-2xl font-bold text-blue-primary250">
-                {selectedPlanData.id === "trial"
-                  ? `₹00/Month`
-                  : `${selectedPlanData.price}/Month`}
-              </p>
+              {(() => {
+                const rawPrice = selectedPlanData?.price || "0";
+                const isFree = selectedPlanData?.id === 'trial' || rawPrice.toLowerCase().includes('free');
+                const basePlanMonthly = isFree ? 0 : parseInt(rawPrice.replace(/[^0-9]/g, ''), 10) || 0;
+
+                // Extra Add-ons
+                const baseDocLimit = selectedPlanData?.id === 'trial' ? 1 : 2;
+                const extraDoctorCost = Math.max(0, doctors - baseDocLimit) * 1299;
+                const extraStaffCost = Math.max(0, staff - 1) * 399;
+
+                const totalMonthly = basePlanMonthly + extraDoctorCost + extraStaffCost;
+
+                let payableMonths = 1;
+                let periodLabel = "/Month";
+
+                if (billingCycle === 'halfYearly') {
+                  payableMonths = 5; // 6 months - 1 month free
+                  periodLabel = "/6 Months";
+                } else if (billingCycle === 'yearly') {
+                  payableMonths = 10; // 12 months - 2 months free
+                  periodLabel = "/Year";
+                }
+
+                const totalBasePrice = totalMonthly * payableMonths;
+                const tax = Math.round(totalBasePrice * 0.18);
+                const total = totalBasePrice + tax;
+
+                return (
+                  <>
+                    <p className="text-sm text-secondary-grey300">
+                      Estimate invoice{" "}
+                      <span className="text-secondary-grey200">
+                        ({selectedPlanData?.name || "Upchar-Q"})
+                      </span>
+                    </p>
+                    <p className="text-xs text-secondary-grey200">
+                      (₹{totalBasePrice.toLocaleString()} Subtotal + ₹{tax.toLocaleString()} Taxes)
+                    </p>
+                    <p className="text-2xl font-bold text-blue-primary250">
+                      ₹{total.toLocaleString()}{periodLabel}
+                    </p>
+                  </>
+                );
+              })()}
             </div>
           </div>
-
-
         </div>
       </main>
     );
@@ -1680,16 +1736,16 @@ const Step5 = forwardRef((props, ref) => {
                 {/* Doctors */}
                 <div>
                   <p className="text-sm text-secondary-grey300 mb-2">
-                    Number of Doctors (Max 2)
+                    Number of Doctors
                   </p>
 
                   <div className="flex items-center gap-2">
                     {/* Minus */}
                     <button
-                      disabled={doctors === 1}
-                      onClick={() => setDoctors(doctors - 1)}
+                      disabled={selectedPlan === 'trial' ? doctors <= 1 : doctors <= 2}
+                      onClick={() => setDoctors(Math.max(selectedPlan === 'trial' ? 1 : 2, doctors - 1))}
                       className={`w-8 h-8 rounded border flex items-center justify-center
-          ${doctors === 1
+          ${(selectedPlan === 'trial' ? doctors <= 1 : doctors <= 2)
                           ? "border-secondary-grey100 text-secondary-grey150 cursor-not-allowed"
                           : "border-border text-secondary-grey300 hover:bg-muted"
                         }`}
@@ -1703,10 +1759,10 @@ const Step5 = forwardRef((props, ref) => {
 
                     {/* Plus */}
                     <button
-                      disabled={doctors === 2}
-                      onClick={() => setDoctors(doctors + 1)}
+                      disabled={selectedPlan === 'trial' || doctors >= 4}
+                      onClick={() => setDoctors(Math.min(4, doctors + 1))}
                       className={`w-8 h-8 rounded border flex items-center justify-center
-          ${doctors === 2
+          ${selectedPlan === 'trial' || doctors >= 4
                           ? "border-secondary-grey100 text-secondary-grey150 cursor-not-allowed"
                           : "border-border text-secondary-grey300 hover:bg-muted"
                         }`}
@@ -1888,7 +1944,7 @@ const Step5 = forwardRef((props, ref) => {
           </div>
         </div>
       </div>
-    </main>
+    </main >
   );
 
   return (
@@ -1902,7 +1958,7 @@ const Step5 = forwardRef((props, ref) => {
         </div>
       </RegistrationHeader>
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-hidden flex flex-col bg-slate-50">
 
         {currentSubStep === 1 ? renderPage1() : renderPage2()}
       </div>

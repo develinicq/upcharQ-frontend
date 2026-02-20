@@ -56,7 +56,6 @@ const useConsultationStore = create((set, get) => ({
             lastFetchedParams.doctorId === params.doctorId;
 
         if (isSameParams && consultationDetails !== DEFAULT_CONSULTATION_DETAILS) {
-            console.log("[useConsultationStore] Skipping fetch: Params same and data exists.");
             return;
         }
 
@@ -112,7 +111,6 @@ const useConsultationStore = create((set, get) => ({
     },
 
     updateConsultationDetails: async (payload, params = null) => {
-        console.log("[useConsultationStore] updateConsultationDetails called");
         const { initialConsultationDetails, consultationDetails } = get();
 
         set({ saving: true, saveError: null });
@@ -147,7 +145,6 @@ const useConsultationStore = create((set, get) => ({
                 response = await putDoctorConsultationDetails(finalPayload);
             }
 
-            console.log("[useConsultationStore] updateConsultationDetails success response:", response);
             if (response.success) {
                 set({
                     saving: false,

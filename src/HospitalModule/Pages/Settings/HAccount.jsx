@@ -425,7 +425,7 @@ export default function HAccount({ profile: initialProfile }) {
                 <InputWithMeta
                   imageUpload={true}
                   fileName={hInfo.establishmentProof ? "Establishment.pdf" : "No file"} // Enhance real logic if URL processing needed
-                  onFileView={(f) => console.log('view', f)}
+                  onFileView={(f) => {}}
                   showInput={false}
                 />
               </div>

@@ -16,9 +16,16 @@ import useDoctorRegistrationStore from '../../store/useDoctorRegistrationStore';
 import useDoctorStep1Store from '../../store/useDoctorStep1Store';
 import useHospitalDoctorDetailsStore from '../../store/useHospitalDoctorDetailsStore';
 import Navbar from '../Navbar';
+import useImageUploadStore from '../../store/useImageUploadStore';
+
 
 const Layout_registration_new = () => {
-  const { currentStep, nextStep, prevStep, registrationType, setRegistrationType, formData, updateFormData, setCurrentStep } = useRegistration();
+  const {
+    currentStep, nextStep, prevStep, registrationType,
+    setRegistrationType, formData, updateFormData,
+    setCurrentStep, resetRegistration
+  } = useRegistration();
+
   // const doctorRegisterStore = useDoctorRegisterStore();
   const [footerLoading, setFooterLoading] = useState(false);
   // Ref for Step1 form
@@ -38,23 +45,42 @@ const Layout_registration_new = () => {
   const { userId: step1UserId } = useDoctorStep1Store();
 
   // Determine registration type from current route
+  // We do NOT automatically reset state on mount anymore to allow browser back/forward navigation without losing data.
+  // State should be reset explicitly via "Cancel" or on successful completion.
   React.useEffect(() => {
-    if (location.pathname.includes('/doctor')) {
-      setRegistrationType('doctor');
-      setCurrentStep(1); // Always start at step 1
-    } else if (location.pathname.includes('/hospital')) {
-      setRegistrationType('hospital');
-      setCurrentStep(1); // Always start at step 1
-    }
-  }, [location.pathname, setRegistrationType, setCurrentStep]);
+    const isDoctorPath = location.pathname.includes('/doctor');
+    const isHospitalPath = location.pathname.includes('/hospital');
 
-  // Inject mock userId for testing purposes if missing
-  React.useEffect(() => {
-    if (registrationType === 'doctor' && !regUserId && !step1UserId) {
-      console.log("Layout_new: Injecting mock userId for testing");
-      setRegField('userId', 'TEST_DOC_123');
+    if (isDoctorPath) {
+      if (registrationType !== 'doctor') {
+        // Only reset if switching types or starting fresh from non-registration
+        resetRegistration();
+        useDoctorStep1Store.getState().reset();
+        useDoctorRegistrationStore.getState().reset();
+        useImageUploadStore.getState().reset();
+
+        setRegistrationType('doctor');
+        setCurrentStep(1);
+      }
+    } else if (isHospitalPath) {
+      if (registrationType !== 'hospital') {
+        // Only reset if switching types or starting fresh from non-registration
+        resetRegistration();
+        useHospitalStep1Store.getState().reset();
+        useHospitalRegistrationStore.getState().reset();
+        useHospitalDoctorDetailsStore.getState().reset();
+        useImageUploadStore.getState().reset();
+
+        setRegistrationType('hospital');
+        setCurrentStep(1);
+      }
     }
-  }, [registrationType, regUserId, step1UserId, setRegField]);
+  }, [location.pathname]); // Only depend on pathname to trigger on entry/switch
+
+
+  // REMOVED: Inject mock userId for testing purposes if missing
+  // This was causing the userId to be set even during a clean registration attempt.
+
 
   // Map formData to API schema for store
   const mapToApiSchema = () => {
@@ -199,9 +225,7 @@ const Layout_registration_new = () => {
           setFooterLoading(true);
           try {
             const success = await step2Ref.current.submit();
-            console.log("Layout: Step 2 submit returned", success);
             if (success) {
-              console.log("Layout: Calling nextStep()");
               nextStep();
             }
           } catch (error) {
@@ -215,31 +239,8 @@ const Layout_registration_new = () => {
         return;
       }
 
-      // Step 3: trigger form submit via ref (Doctor Clinic Setup)
+      // Handle Step 3 sub-steps (Was Step 4 Review & Create)
       if (currentStep === 3) {
-        if (step3Ref.current && step3Ref.current.submit) {
-          setFooterLoading(true);
-          try {
-            const success = await step3Ref.current.submit();
-            if (success) {
-              nextStep();
-            }
-          } catch (error) {
-            console.error("Step 3 submission error", error);
-          } finally {
-            setFooterLoading(false);
-          }
-        } else {
-          console.warn("Step 3 Ref or Submit method missing", step3Ref.current);
-          // If no submit handler (e.g. step not fully wired), assume next for now to unblock UI?
-          // No, safer to wait for Ref. If missing, it log warning.
-          // But wait, the hook useRef is step1Ref, step2Ref... do we have step3Ref?
-        }
-        return;
-      }
-
-      // Handle Step 4 sub-steps
-      if (currentStep === 4) {
         const currentSubStep = formData.step4SubStep || 1;
 
         if (currentSubStep === 1) {
@@ -254,15 +255,15 @@ const Layout_registration_new = () => {
             alert('Please accept the Terms & Conditions and Data Privacy Agreement to continue.');
           }
         }
-      } else if (currentStep === 5) {
-        // Step 5: Activate Doctor via Ref
+      } else if (currentStep === 4) {
+        // Step 4: Activate Doctor via Ref (Was Step 5 Package & Payment)
         if (step5Ref.current && step5Ref.current.submit) {
           setFooterLoading(true);
           try {
             // The submit method in Step5 returns true on success
             const success = await step5Ref.current.submit();
             if (success) {
-              setCurrentStep(7);
+              setCurrentStep(5);
             }
           } catch (error) {
             console.error("Step 5 submission error", error);
@@ -273,12 +274,19 @@ const Layout_registration_new = () => {
           console.warn("Step 5 Ref missing, cannot submit");
         }
         return;
-      } else if (currentStep === 6) {
-        // Navigate to doctor profile/dashboard
-        navigate('/doctor');
-      } else if (currentStep < 5) {
+      } else if (currentStep === 5) {
+        // Step 5 is Success (Was Step 7) - Clear everything before leaving
+        resetRegistration();
+        useDoctorStep1Store.getState().reset();
+        useDoctorRegistrationStore.getState().reset();
+        useImageUploadStore.getState().reset();
+        navigate(registrationType === 'doctor' ? '/doctor' : '/hospitals');
+      }
+      else if (currentStep < 5) {
+
         nextStep();
       }
+
     } else if (registrationType === 'hospital') {
       // Step 1: trigger form submit via ref, only move if valid and API success
       if (currentStep === 1 && hos1Ref.current && hos1Ref.current.submit) {
@@ -505,7 +513,15 @@ const Layout_registration_new = () => {
       } else if (currentStep === 6) {
         // Final screen for non-doctor owners is Step 6 (already navigated to profile)
         if (String(formData.isDoctor || 'no') === 'no') {
-          navigate('/hospitals');
+          const hospitalId = useHospitalRegistrationStore.getState().hospitalId ||
+            useHospitalStep1Store.getState().hospitalId ||
+            formData.hospitalId;
+
+          if (hospitalId) {
+            navigate(`/hospital/${hospitalId}`);
+          } else {
+            navigate('/hospitals');
+          }
           return;
         }
 
@@ -560,9 +576,25 @@ const Layout_registration_new = () => {
           setFooterLoading(false);
         }
       } else if (currentStep === (formData.isDoctor === 'no' ? 6 : 7)) {
-        // Navigate to hospital profile/dashboard
-        navigate('/hospitals');
-      } else {
+        // Navigate to hospital profile page
+        const hospitalId = useHospitalRegistrationStore.getState().hospitalId ||
+          useHospitalStep1Store.getState().hospitalId ||
+          formData.hospitalId;
+
+        resetRegistration();
+        useHospitalStep1Store.getState().reset();
+        useHospitalRegistrationStore.getState().reset();
+        useImageUploadStore.getState().reset();
+
+        // Navigate to the hospital profile page
+        if (hospitalId) {
+          navigate(`/hospital/${hospitalId}`);
+        } else {
+          // Fallback to hospitals list if no ID found
+          navigate('/hospitals');
+        }
+      }
+      else {
         nextStep();
       }
     }
@@ -570,8 +602,8 @@ const Layout_registration_new = () => {
 
   const handlePrev = () => {
     if (registrationType === 'doctor') {
-      // Handle Step 4 sub-steps
-      if (currentStep === 4) {
+      // Handle Step 3 sub-steps (Was Step 4)
+      if (currentStep === 3) {
         const currentSubStep = formData.step4SubStep || 1;
         if (currentSubStep === 2) {
           // Move back to sub-step 1
@@ -580,20 +612,22 @@ const Layout_registration_new = () => {
           // Move to previous main step
           prevStep();
         }
-      } else if (currentStep === 5) {
+      } else if (currentStep === 4) {
+        // Was Step 5
         const currentSubStep = formData.step5SubStep || 1;
         if (currentSubStep === 2) {
           updateFormData({ step5SubStep: 1 });
         } else {
           prevStep();
         }
-      } else if (currentStep === 7) {
-        // Move back from success page to Step 5
-        setCurrentStep(5);
+      } else if (currentStep === 5) {
+        // Move back from success page to Step 4 (Was Step 7 to 5)
+        setCurrentStep(4);
         updateFormData({ step5SubStep: 2 }); // Ensure we go back to the summary view
       } else if (currentStep > 1) {
         prevStep();
       }
+
     } else if (registrationType === 'hospital') {
       // Handle Step 2 for hospital (Doctor Registration or Hospital Details)
       if (currentStep === 2) {
@@ -693,28 +727,44 @@ const Layout_registration_new = () => {
   };
 
   const handleCancel = () => {
-    navigate('/');
+    resetRegistration();
+    useDoctorStep1Store.getState().reset();
+    useDoctorRegistrationStore.getState().reset();
+    useHospitalStep1Store.getState().reset();
+    useHospitalRegistrationStore.getState().reset();
+    useHospitalDoctorDetailsStore.getState().reset();
+    useImageUploadStore.getState().reset();
+    navigate('/doctor');
   };
+
 
   // Determine button labels for different steps
   const getNextButtonLabel = () => {
     if (registrationType === 'doctor') {
-      if (currentStep === 4) {
+      if (currentStep === 3) {
         const currentSubStep = formData.step4SubStep || 1;
         if (currentSubStep === 1) {
           return "Save & Next →";
+        } else if (currentSubStep === 2) {
+          return formData.termsAccepted && formData.privacyAccepted ? "Save & Activate" : "Accept Terms to Continue";
         }
-      } else if (currentStep === 5) {
-        // Package & Payment step
-        return "Preview Purchase";
-      } else if (currentStep === 6) {
-        // Profile completion page
-        return "Go to Profile";
       }
+      else if (currentStep === 4) {
+        // Package & Payment step
+        const currentSubStep = formData.step5SubStep || 1;
+        return currentSubStep === 1 ? "Preview Purchase" : "Purchase Plan";
+      }
+      else if (currentStep === 5) {
+        // Success Page
+        return "Go to Profile →";
+      }
+
       return "Save & Next →";
+
     }
 
     else if (registrationType === 'hospital') {
+      // ... (existing hospital logic for step 2,3,4,5) ...
       if (currentStep === 2) {
         // Check if user is a doctor to determine if this is Doctor Registration or Hospital Details
         if (formData.isDoctor === 'no') {
@@ -773,21 +823,37 @@ const Layout_registration_new = () => {
             return formData.hosTermsAccepted && formData.hosPrivacyAccepted ? "Save & Activate" : "Accept Terms to Continue";
           }
         }
-      } else if (currentStep === (formData.isDoctor === 'no' ? 6 : 7)) {
-        // Profile completion page (Hos_7)
-        return "Go to Profile";
+      } else if (currentStep === 6 && formData.isDoctor === 'no') {
+        // Success Page (Non-Doctor)
+        return "Go to Profile →";
       } else if (currentStep === 6 && formData.isDoctor === 'yes') {
         // Package & Payment step (Hos_6) - only when user is a doctor
         return "Send Payment Link";
+      } else if (currentStep === 7 && formData.isDoctor === 'yes') {
+        // Success Page (Doctor Owner)
+        return "Go to Profile →";
       }
+
       return "Save & Next →";
     }
 
     return "Save & Next →";
   };
 
+  const getCancelButtonLabel = () => {
+    if (registrationType === 'doctor' && currentStep === 5) return "Close";
+
+    if (registrationType === 'hospital') {
+      if (formData.isDoctor === 'no' && currentStep === 6) return "Close";
+      if (formData.isDoctor === 'yes' && currentStep === 7) return "Close";
+    }
+    return "Cancel";
+  };
+
   const nextLabel = getNextButtonLabel();
-  const maxSteps = registrationType === 'doctor' ? 7 : (formData.isDoctor === 'no' ? 6 : 7);
+  const cancelLabel = getCancelButtonLabel();
+  const maxSteps = registrationType === 'doctor' ? 5 : (formData.isDoctor === 'no' ? 6 : 7);
+
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -813,10 +879,11 @@ const Layout_registration_new = () => {
               <div className="h-full">
                 <Step2 ref={step2Ref} />
               </div>
-            ) : registrationType === 'doctor' && currentStep === 5 ? (
+            ) : registrationType === 'doctor' && currentStep === 4 ? (
               <div className="h-full">
                 <Step5 ref={step5Ref} />
               </div>
+
             ) : registrationType === 'hospital' && currentStep === 1 ? (
               <RegistrationFlow type={registrationType} ref={hos1Ref} />
             ) : (
@@ -829,9 +896,9 @@ const Layout_registration_new = () => {
                     registrationType === 'doctor' ? (
                       currentStep === 1 ? step1Ref :
                         currentStep === 2 ? step2Ref :
-                          currentStep === 3 ? step3Ref :
-                            null
+                          null
                     ) : (
+
                       currentStep === 1 ? hos1Ref :
                         currentStep === 2 ? (formData.isDoctor === 'no' ? hos3Ref : hos2Ref) :
                           currentStep === 3 ? (formData.isDoctor === 'no' ? hos4Ref : hos3Ref) :
@@ -845,23 +912,26 @@ const Layout_registration_new = () => {
           </main>
 
           {/* Footer - Fixed */}
-          <RegistrationFooter
-            onCancel={handleCancel}
-            onNext={handleNext}
-            onPrev={handlePrev}
-            currentStep={currentStep}
-            maxSteps={maxSteps}
-            nextLabel={nextLabel}
-            disablePrev={
-              (registrationType === 'doctor' && (currentStep === 1 || currentStep === 2 || currentStep === 6)) ||
-              (registrationType === 'hospital' && (
-                currentStep === 1 ||
-                (currentStep === 2 && (formData.hosStep3SubStep || 1) === 1) ||
-                (currentStep === maxSteps)
-              ))
-            }
-            loading={footerLoading}
-          />
+          {!(registrationType === 'hospital' && ((formData.isDoctor === 'no' && (currentStep === 5 || currentStep === 6)) || (formData.isDoctor === 'yes' && (currentStep === 6 || currentStep === 7)))) && (
+            <RegistrationFooter
+              onCancel={handleCancel}
+              onNext={handleNext}
+              onPrev={handlePrev}
+              currentStep={currentStep}
+              maxSteps={maxSteps}
+              nextLabel={nextLabel}
+              cancelLabel={cancelLabel}
+              disablePrev={
+                (registrationType === 'doctor' && (currentStep === 1 || currentStep === 2 || currentStep === 5)) ||
+                (registrationType === 'hospital' && (
+                  currentStep === 1 ||
+                  (currentStep === 2 && (formData.hosStep3SubStep || 1) === 1) ||
+                  (currentStep === maxSteps)
+                ))
+              }
+              loading={footerLoading}
+            />
+          )}
         </div>
       </div>
     </div>

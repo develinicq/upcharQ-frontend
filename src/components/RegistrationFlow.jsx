@@ -25,7 +25,6 @@ const RegistrationFlow = React.forwardRef(({ type }, ref) => {
 
   // Render the appropriate step component based on registration type and current step
   const renderStepComponent = () => {
-    console.log("RegistrationFlow: Rendering for type", type, "step", currentStep);
     if (type === 'doctor') {
       switch (currentStep) {
         case 1:
@@ -33,18 +32,15 @@ const RegistrationFlow = React.forwardRef(({ type }, ref) => {
         case 2:
           return <Step2 ref={ref} />;
         case 3:
-          return <Step3 ref={ref} />;
-        case 4:
           return <Step4 />;
-        case 5:
+        case 4:
           return <Step5 />;
-        case 6:
-          return <Step6 />;
-        case 7:
+        case 5:
           return <Step7 />;
         default:
           return <Step1 />;
       }
+
     } else if (type === 'hospital') {
       // Handle conditional step rendering based on isDoctor selection
       if (formData.isDoctor === 'no') {

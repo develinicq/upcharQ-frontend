@@ -565,15 +565,9 @@ const PersonalTab = ({ profile, fetchBasicInfo, updateBasicInfo, fetchProfession
                         };
 
                         if (eduEditMode === "edit" && eduEditData?.id) {
-                            console.log(
-                                "Updating education with ID:",
-                                eduEditData.id,
-                                "Payload:",
-                                payload
-                            );
+                            
                             await updateEducation(eduEditData.id, payload);
                         } else {
-                            console.log("Adding new education. Payload:", payload);
                             await addEducation(payload);
                         }
                         await fetchEducation(); // Refresh data

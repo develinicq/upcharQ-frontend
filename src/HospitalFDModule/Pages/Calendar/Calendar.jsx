@@ -31,17 +31,14 @@ const HFDCalendar = () => {
   ]);
 
   const handleEventClick = (event) => {
-    console.log("Event clicked:", event);
     // TODO: Open event details modal/drawer
   };
 
   const handleAddNew = () => {
-    console.log("Add new clicked");
     // TODO: Open add appointment/event modal
   };
 
   const handleDateSelect = (date) => {
-    console.log("Date selected:", date);
     // TODO: Handle date selection - could filter events or navigate
   };
 

@@ -4,7 +4,9 @@ import axiosInstance from '../lib/axios';
 const initialState = {
   // Step 1 (captured from Step1 response)
   userId: '',
+  displayId: '',
   specialization: '',
+
   experienceYears: '',
   medicalCouncilName: '',
   medicalCouncilRegYear: '',
@@ -140,13 +142,13 @@ const useDoctorRegistrationStore = create((set, get) => ({
       // Map documents to { no, type, fileName, tempKey }
       const documents = Array.isArray(state.documents)
         ? state.documents
-            .filter((d) => d && d.type && (d.tempKey || d.url) && (d.no !== undefined && d.no !== null))
-            .map((d) => ({
-              no: d.no,
-              type: d.type,
-              fileName: d.fileName || d.name || 'document',
-              tempKey: d.tempKey || d.url,
-            }))
+          .filter((d) => d && d.type && (d.tempKey || d.url) && (d.no !== undefined && d.no !== null))
+          .map((d) => ({
+            no: d.no,
+            type: d.type,
+            fileName: d.fileName || d.name || 'document',
+            tempKey: d.tempKey || d.url,
+          }))
         : [];
 
       // Compose the body for new API schema

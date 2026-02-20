@@ -19,7 +19,7 @@ const BaseNavbar = ({
   const [isHovering, setIsHovering] = React.useState(false);
   // size styles
   const sizes = {
-  normal: "h-11 px-4 py-3 gap-[6px]", // 44px height, 16px left/right, 12px top/bottom, 6px gap
+    normal: "h-11 px-4 py-3 gap-[6px]", // 44px height, 16px left/right, 12px top/bottom, 6px gap
     large: "h-12 px-5 py-3.5 gap-3",
   };
 
@@ -47,8 +47,8 @@ const BaseNavbar = ({
         "flex items-center w-full transition-all",
         sizes[size],
         background,
-  active ? "font-medium" : "font-normal",
-  !active && (isHovering || state === "hover") && "border border-[#E6F0FF]"
+        active ? "font-medium" : "font-normal",
+        !active && (isHovering || state === "hover") && "ring-1 ring-inset ring-[#E6F0FF]"
       )}
       disabled={state === "disabled"}
       onMouseEnter={() => setIsHovering(true)}
@@ -56,15 +56,24 @@ const BaseNavbar = ({
     >
       {/* Icon priority: image URLs > Icon component */}
       {iconSelected || iconUnselected ? (
-        <img
-          src={
-            active
-              ? iconSelected
-              : (isHovering ? (iconHover || iconSelected || iconUnselected) : iconUnselected)
-          }
-          alt="icon"
-          className="w-5 h-5"
-        />
+        <div className="relative w-5 h-5 shrink-0">
+          <img
+            src={iconUnselected || iconSelected}
+            alt="icon"
+            className={cn(
+              "absolute inset-0 w-full h-full object-contain transition-opacity duration-200",
+              active || isHovering ? "opacity-0" : "opacity-100"
+            )}
+          />
+          <img
+            src={active ? (iconSelected || iconUnselected) : (iconHover || iconUnselected || iconSelected)}
+            alt="icon active"
+            className={cn(
+              "absolute inset-0 w-full h-full object-contain transition-opacity duration-200",
+              active || isHovering ? "opacity-100" : "opacity-0"
+            )}
+          />
+        </div>
       ) : (
         Icon && (
           <Icon

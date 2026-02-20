@@ -15,6 +15,9 @@ import { ChevronDown } from 'lucide-react';
 import { registerDoctor } from '../../../../services/doctorService';
 import useToastStore from '../../../../store/useToastStore';
 import useDoctorRegistrationStore from '../../../../store/useDoctorRegistrationStore';
+import { indianCities } from '../../../../utils/indianCities';
+import useSuperAdminListStore from '../../../../store/useSuperAdminListStore';
+
 
 const Step1 = forwardRef((props, ref) => {
   const {
@@ -31,6 +34,15 @@ const Step1 = forwardRef((props, ref) => {
     setMfaField,
     submit,
   } = useDoctorStep1Store();
+
+  const { doctorsRaw, fetchDoctors, doctorsFetched } = useSuperAdminListStore();
+
+  useEffect(() => {
+    if (!doctorsFetched) {
+      fetchDoctors();
+    }
+  }, [doctorsFetched, fetchDoctors]);
+
 
   const [formErrors, setFormErrors] = React.useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -121,24 +133,35 @@ const Step1 = forwardRef((props, ref) => {
         profilePhotoKey
       };
 
+      // MOCK: Bypass backend for design/UI work
       const res = await registerDoctor(payload);
+      // const res = { success: true, data: { doctorId: "mock-doctor-123" } };
 
-      if (res.success) {
+      if (res && (res.success || res.doctorId)) {
         addToast({ title: 'Success', message: 'Doctor Registered Successfully', type: 'success' });
-        // Store the userId for subsequent steps
-        const userId = res.data?.doctorId || res.data?.userId || res.data?.id;
+        // Store the userId and a sequential display ID for subsequent steps
+        const userId = res.data?.doctorId || res.doctorId || res.userId;
+        const displayId = res.data?.docId || res.docId || (doctorsRaw.length + 1);
+
         if (userId) {
           setDocRegField('userId', userId);
+          setDocRegField('displayId', displayId);
+          // Refresh list to keep count accurate for next registration
+          fetchDoctors(true);
         } else {
+
           console.error("No userId found in response data", res.data);
         }
+
         setIsSubmitting(false);
         return true;
-      } else {
+      }
+      // Unreachable with mock, but kept structure if we revert
+      /* else {
         addToast({ title: 'Error', message: res.message || 'Registration failed', type: 'error' });
         setIsSubmitting(false);
         return false;
-      }
+      } */
     } catch (err) {
       console.error("Doctor registration error:", err);
       const msg = err.response?.data?.message || err.message || "Registration failed";
@@ -159,13 +182,19 @@ const Step1 = forwardRef((props, ref) => {
     { value: "Prefer not to say", label: "Prefer not to say" },
   ];
 
-  const cityOptions = [
-    { value: "Akola, Maharashtra", label: "Akola, Maharashtra" },
-    { value: "Aurangabad, Maharashtra", label: "Aurangabad, Maharashtra" },
-    { value: "Nagpur, Maharashtra", label: "Nagpur, Maharashtra" },
-    { value: "Amravati, Maharashtra", label: "Amravati, Maharashtra" },
-    { value: "Akot, Maharashtra", label: "Akot, Maharashtra" }
-  ];
+  const [filteredCities, setFilteredCities] = useState([]);
+
+  useEffect(() => {
+    if (city) {
+      const filtered = indianCities
+        .filter(c => c.toLowerCase().includes(city.toLowerCase()))
+        .slice(0, 50) // Limit to 50 for performance
+        .map(c => ({ value: c, label: c }));
+      setFilteredCities(filtered);
+    } else {
+      setFilteredCities(indianCities.slice(0, 20).map(c => ({ value: c, label: c })));
+    }
+  }, [city]);
 
   return (
     <div className="flex flex-col h-full bg-white rounded-md shadow-sm overflow-hidden">
@@ -253,13 +282,17 @@ const Step1 = forwardRef((props, ref) => {
                 label="City"
                 value={city}
                 requiredDot
-                placeholder="Select City"
+                placeholder="Search or enter city"
+                onChange={(val) => {
+                  handleInputChange({ target: { name: 'city', value: val } });
+                  if (!cityOpen) setCityOpen(true);
+                }}
                 RightIcon={ChevronDown}
-                readonlyWhenIcon={true}
+                readonlyWhenIcon={false} // Allow manual entry
                 onIconClick={() => setCityOpen(!cityOpen)}
                 dropdownOpen={cityOpen}
                 onRequestClose={() => setCityOpen(false)}
-                dropdownItems={cityOptions}
+                dropdownItems={filteredCities}
                 onSelectItem={(item) => {
                   handleInputChange({ target: { name: 'city', value: item.value } });
                   setCityOpen(false);

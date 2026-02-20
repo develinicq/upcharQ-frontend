@@ -75,7 +75,7 @@ export default function Patient() {
 
     const columns = useMemo(
         () => getPatientColumns(
-            (row) => console.log('Open Log', row),
+            (row) => {},
             (row) => {
                 setSchedulePatient(row);
                 setIsScheduleOpen(true);

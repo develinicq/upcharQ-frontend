@@ -243,7 +243,7 @@ const Info = ({ doctor, onLoadingChange, cache = {}, updateCache }) => {
   const [pubEditMode, setPubEditMode] = useState("add");
   const [expEditMode, setExpEditMode] = useState("add");
 
-  const onFileView = (fileName) => { console.log("View file:", fileName); };
+  const onFileView = (fileName) => {  };
 
   const formatExperienceRange = (start, end, current) => {
     if (!start) return "";
@@ -265,7 +265,9 @@ const Info = ({ doctor, onLoadingChange, cache = {}, updateCache }) => {
     city: doctor?.location?.split(',')[0] || '',
     website: doctor?.website || '',
     headline: doctor?.designation || '',
-    about: doctor?.about || ''
+    about: doctor?.about || '',
+    phoneVerified: false,
+    emailIdVerified: false,
   });
 
   // Track individual loading flags for this page
@@ -306,14 +308,20 @@ const Info = ({ doctor, onLoadingChange, cache = {}, updateCache }) => {
           website: d.website || '',
           headline: d.headline || '',
           about: d.about || '',
-          languages: Array.isArray(d.languages) ? d.languages : []
+          languages: Array.isArray(d.languages) ? d.languages : [],
+          phoneVerified: d.phoneVerified || false,
+          emailIdVerified: d.emailIdVerified || false,
         };
         if (!cancelled) {
           setBasic(mapped);
           if (typeof updateCache === 'function') updateCache({ basic: mapped });
         }
       } catch (err) {
-        console.error('Failed to fetch basic info for SuperAdmin:', err);
+        console.error('Failed to fetch basic info for SuperAdmin:', {
+          status: err?.response?.status,
+          message: err?.response?.data?.message || err.message,
+          error: err
+        });
       }
       finally { if (!cancelled) setBasicLoading(false); }
     })();
@@ -368,7 +376,11 @@ const Info = ({ doctor, onLoadingChange, cache = {}, updateCache }) => {
           if (typeof updateCache === 'function') updateCache({ profDetails: d });
         }
       } catch (err) {
-        console.error('Failed to fetch professional details for SuperAdmin:', err);
+        console.error('Failed to fetch professional details for SuperAdmin:', {
+          status: err?.response?.status,
+          message: err?.response?.data?.message || err.message,
+          error: err
+        });
       }
       finally { if (!cancelled) setProfLoading(false); }
     })();
@@ -395,7 +407,11 @@ const Info = ({ doctor, onLoadingChange, cache = {}, updateCache }) => {
           if (typeof updateCache === 'function') updateCache({ experiences: list });
         }
       } catch (err) {
-        console.error('Failed to fetch experiences for SuperAdmin:', err);
+        console.error('Failed to fetch experiences for SuperAdmin:', {
+          status: err?.response?.status,
+          message: err?.response?.data?.message || err.message,
+          error: err
+        });
       }
       finally { if (!cancelled) setExpLoading(false); }
     })();
@@ -428,7 +444,11 @@ const Info = ({ doctor, onLoadingChange, cache = {}, updateCache }) => {
           if (typeof updateCache === 'function') updateCache({ education: list });
         }
       } catch (err) {
-        console.error('Failed to fetch educational details for SuperAdmin:', err);
+        console.error('Failed to fetch educational details for SuperAdmin:', {
+          status: err?.response?.status,
+          message: err?.response?.data?.message || err.message,
+          error: err
+        });
       }
       finally { if (!cancelled) setEduLoading(false); }
     })();
@@ -475,7 +495,7 @@ const Info = ({ doctor, onLoadingChange, cache = {}, updateCache }) => {
     return (
       <div className="relative min-h-[320px]">
         <div className="absolute inset-0 flex items-center justify-center bg-secondary-grey50 ">
-          <UniversalLoader size={28} className=" bg-secondary-grey50"/>
+          <UniversalLoader size={28} className=" bg-secondary-grey50" />
         </div>
       </div>
     );
@@ -505,28 +525,32 @@ const Info = ({ doctor, onLoadingChange, cache = {}, updateCache }) => {
                 label="Mobile Number"
                 value={profile.basic?.phone}
                 right={
-                  <span className="inline-flex items-center text-success-300 border bg-success-100 border-success-300 py-0.5 px-1 rounded-md text-[12px]">
-                    <img
-                      src={verifiedTick}
-                      alt="Verified"
-                      className="w-3.5 h-3.5 mr-1"
-                    />
-                    Verified
-                  </span>
+                  profile.basic?.phoneVerified ? (
+                    <span className="inline-flex items-center text-success-300 border bg-success-100 border-success-300 py-0.5 px-1 rounded-md text-[12px]">
+                      <img
+                        src={verifiedTick}
+                        alt="Verified"
+                        className="w-3.5 h-3.5 mr-1"
+                      />
+                      Verified
+                    </span>
+                  ) : null
                 }
               />
               <InfoField
                 label="Email"
                 value={profile.basic?.email}
                 right={
-                  <span className="inline-flex items-center text-success-300 border bg-success-100 border-success-300 py-0.5 px-1 rounded-md text-[12px]">
-                    <img
-                      src={verifiedTick}
-                      alt="Verified"
-                      className="w-3.5 h-3.5 mr-1"
-                    />
-                    Verified
-                  </span>
+                  profile.basic?.emailIdVerified ? (
+                    <span className="inline-flex items-center text-success-300 border bg-success-100 border-success-300 py-0.5 px-1 rounded-md text-[12px]">
+                      <img
+                        src={verifiedTick}
+                        alt="Verified"
+                        className="w-3.5 h-3.5 mr-1"
+                      />
+                      Verified
+                    </span>
+                  ) : null
                 }
               />
               <InfoField

@@ -9,7 +9,6 @@ export default function SecurityTab() {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        console.log("Verify OTP");
     }
 
     return (

@@ -3,7 +3,7 @@ import Header from '../../../../components/DoctorList/Header'
 import useSuperAdminAuthStore from '../../../../store/useSuperAdminAuthStore'
 import useSuperAdminListStore from '../../../../store/useSuperAdminListStore'
 import SampleTable from '../../../../pages/SampleTable'
-import { doctorColumns, draftColumns } from './columns'
+import { doctorColumns, draftColumns, invitedColumns } from './columns'
 import { useNavigate } from 'react-router-dom';
 import UniversalLoader from '@/components/UniversalLoader'
 
@@ -28,12 +28,14 @@ const Doc_list = () => {
   }, [isAuthed, fetchDoctors]);
 
   // Bucket mapping from status to categories used in filters
-  const statusToBucket = (status) => {
-    const s = String(status || '').toUpperCase();
+  const statusToBucket = (d) => {
+    const s = String(d?.status || '').toUpperCase();
     if (s === 'ACTIVE') return 'active';
     if (s === 'INACTIVE') return 'inactive';
-    // Everything else goes to draft per requirement
-    return 'draft';
+    // If draftDate is present, it's a draft
+    if (d?.draftDate) return 'draft';
+    // Otherwise, treat as invited (registered but not onboarded)
+    return 'invited';
   };
 
   const doctorsAll = useMemo(() => {
@@ -63,19 +65,20 @@ const Doc_list = () => {
         draftDate: d?.draftDate || '',
         plan: d?.plan ?? '—',
         planStatus: d?.planStatus ?? '—',
-        _bucket: statusToBucket(d?.status),
+        _bucket: statusToBucket(d),
       };
     };
     return doctorsRaw.map(mapOne);
   }, [doctorsRaw])
 
   const counts = useMemo(() => {
-    const c = { all: doctorsAll.length, active: 0, inactive: 0, draft: 0 };
+    const c = { all: doctorsAll.length, active: 0, inactive: 0, draft: 0, invited: 0 };
     doctorsAll.forEach((d) => {
       const b = d._bucket;
       if (b === 'active') c.active += 1;
       else if (b === 'inactive') c.inactive += 1;
       else if (b === 'draft') c.draft += 1;
+      else if (b === 'invited') c.invited += 1;
     });
     return c;
   }, [doctorsAll])
@@ -87,6 +90,7 @@ const Doc_list = () => {
     if (selected === 'active') filtered = doctorsAll.filter(d => d._bucket === 'active')
     if (selected === 'inactive') filtered = doctorsAll.filter(d => d._bucket === 'inactive')
     if (selected === 'draft') filtered = doctorsAll.filter(d => d._bucket === 'draft')
+    if (selected === 'invited') filtered = doctorsAll.filter(d => d._bucket === 'invited')
     return filtered;
   }, [doctorsAll, selected])
 
@@ -101,9 +105,7 @@ const Doc_list = () => {
   }, [doctors, page, pageSize]);
 
   const handleRowClick = (doc) => {
-    console.log("Doc_list: Row clicked. Doc object:", doc);
     const targetUrl = `/doctor/${encodeURIComponent(doc.userId || doc.id)}`;
-    console.log("Doc_list: Navigating to:", targetUrl);
     navigate(targetUrl, { state: { doctor: doc } });
   };
 
@@ -122,6 +124,7 @@ const Doc_list = () => {
               { key: 'active', label: 'Active' },
               { key: 'inactive', label: 'Inactive' },
               { key: 'draft', label: 'Draft' },
+              { key: 'invited', label: 'Invited' },
             ]}
           />
         </div>
@@ -129,7 +132,7 @@ const Doc_list = () => {
 
       {loading && (
         <div className="flex items-center justify-center bg-white h-screen">
-          <UniversalLoader size={32}  />
+          <UniversalLoader size={32} />
         </div>
       )}
       {!loading && error && <div className="p-6 bg-white h-screen text-red-600">{String(error)}</div>}
@@ -141,7 +144,7 @@ const Doc_list = () => {
             </div>
           ) : (
             <SampleTable
-              columns={selected === 'draft' ? draftColumns : doctorColumns}
+              columns={selected === 'draft' ? draftColumns : selected === 'invited' ? invitedColumns : doctorColumns}
               data={pagedData}
               page={page}
               pageSize={pageSize}

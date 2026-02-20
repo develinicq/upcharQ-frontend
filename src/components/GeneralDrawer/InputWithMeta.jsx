@@ -63,7 +63,9 @@ export default function InputWithMeta({
   meta,
   dropUp = false,
   dropdownClassName = "",
+  dropdownItemClassName,
   suffix = "",
+  prefix = "",
 }) {
   const truncate = (str, max) => {
     if (!str) return str;
@@ -167,7 +169,7 @@ export default function InputWithMeta({
             <div className="h-[32px] w-full border-[0.5px] border-dashed border-secondary-grey200 rounded-md flex items-center justify-between px-2 text-sm cursor-pointer overflow-x-hidden bg-secondary-grey50">
               <span className="flex items-center gap-2 text-secondary-grey300 flex-1 min-w-0">
                 <img src="/Doctor_module/settings/pdf_black.png" alt="" className="h-6 w-6" />
-                <span className="whitespace-normal break-words break-all overflow-hidden text-secondary-grey400">
+                <span className="whitespace-nowrap overflow-hidden text-ellipsis text-secondary-grey400">
                   {truncate(fileName || "Establishment.pdf", fileNameMaxLength)}
                 </span>
               </span>
@@ -233,8 +235,13 @@ export default function InputWithMeta({
             )}
           </div>
         ) : showInput ? (
-          <div className={`relative flex items-stretch ${suffix ? "h-8" : ""}`}>
-            {LeftIcon && !suffix && (
+          <div className={`relative flex items-stretch ${suffix || prefix ? "h-8" : ""}`}>
+            {prefix && (
+              <div className="bg-secondary-grey50 border-[0.5px] border-secondary-grey200 rounded-l-sm px-2 flex items-center justify-center text-[14px] text-secondary-grey300 whitespace-nowrap border-r-0">
+                {prefix}
+              </div>
+            )}
+            {LeftIcon && !suffix && !prefix && (
               <div className="absolute left-2 top-1/2 -translate-y-1/2 text-secondary-grey200">
                 {typeof LeftIcon === "string" ? (
                   <img src={LeftIcon} alt="icon" className="h-4 w-4" />
@@ -246,8 +253,8 @@ export default function InputWithMeta({
             <input
               type={type}
               className={`w-full rounded-sm border-[0.5px] border-secondary-grey200 p-2 h-8 text-sm text-secondary-grey400 focus:outline-none focus:ring-0 focus:border-blue-primary150 focus:border-[2px] placeholder:text-secondary-grey100 ${suffix ? "rounded-r-none border-r-0 pr-2" : "pr-16"
-                } ${disabled ? "bg-gray-100 cursor-not-allowed" : ""} ${isReadOnly || dropdownOpen ? "cursor-pointer select-none" : ""
-                } ${LeftIcon ? "pl-8" : ""}`}
+                } ${disabled ? "bg-gray-100 cursor-not-allowed" : ""} ${isReadOnly ? "cursor-pointer select-none" : ""
+                } ${prefix ? "rounded-l-none border-l-0 pl-2" : (LeftIcon ? "pl-8" : "")}`}
               value={value || ""}
               onChange={(e) => {
                 if (isReadOnly) return; // prevent typing when read-only
@@ -256,9 +263,11 @@ export default function InputWithMeta({
               placeholder={placeholder}
               disabled={disabled}
               readOnly={isReadOnly}
-              onMouseDown={(e) => {
-                // Ensure opening happens on first click
-                if (isReadOnly) e.preventDefault();
+              onClick={(e) => {
+                // Ensure opening happens on click
+                if (isReadOnly) {
+                  // e.preventDefault(); // Optional: keep if we strictly want no cursor
+                }
                 handleOpen();
               }}
               onKeyDown={(e) => {
@@ -330,6 +339,7 @@ export default function InputWithMeta({
 
             itemRenderer={itemRenderer}
             className={`${dropUp ? 'bottom-full mb-1 !top-auto' : 'top-full mt-1'} ${dropdownClassName}`}
+            itemClassName={dropdownItemClassName}
           />
         )}
       {meta && <p className="text-[12px] text-secondary-grey200 leading-tight ">{meta}</p>}

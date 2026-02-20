@@ -6,13 +6,13 @@ import PasswordRequirements from '../../../components/FormItems/PasswordRequirem
 import PasswordStrengthBar from '../../../components/FormItems/PasswordStrengthBar'
 import DoctorInfoCard from '../../../DoctorModule/Components/Login/DoctorInfoCard'
 
-const HOnboarding = ({ onContinue }) => {
+const HOnboarding = ({ onContinue, details: propDetails }) => {
   const [formData, setFormData] = useState({ password: '', confirmPassword: '' })
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isHelpOpen, setIsHelpOpen] = useState(false)
 
-  const details = {
+  const details = propDetails || {
     user: {
       firstName: 'Hospital',
       lastName: 'Admin',

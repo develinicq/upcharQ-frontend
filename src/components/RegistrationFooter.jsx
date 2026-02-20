@@ -10,7 +10,7 @@ import useHospitalStep1Store from '../store/useHospitalStep1Store';
 import useHospitalDoctorDetailsStore from '../store/useHospitalDoctorDetailsStore';
 import useHospitalRegistrationStore from '../store/useHospitalRegistrationStore';
 
-const RegistrationFooter = ({ onCancel, onNext, onPrev, currentStep, maxSteps, nextLabel = "Save & Next", disablePrev = false, loading = false, bypassValidation = false }) => {
+const RegistrationFooter = ({ onCancel, onNext, onPrev, currentStep, maxSteps, nextLabel = "Save & Next", cancelLabel = "Cancel", disablePrev = false, loading = false, bypassValidation = false }) => {
   const { registrationType, formData, setCurrentStep } = useRegistration();
   const [localError, setLocalError] = React.useState(null);
   const [disablePrevLocal, setDisablePrevLocal] = React.useState(false);
@@ -163,14 +163,11 @@ const RegistrationFooter = ({ onCancel, onNext, onPrev, currentStep, maxSteps, n
   const validateStep4 = () => {
     const currentSubStep = formData.step4SubStep || 1;
 
-    // Substep 1: Basic doc validation
+    // Substep 1: Review details (No extra validation needed, already done in step 2)
     if (currentSubStep === 1) {
-      if (!regState.documents || regState.documents.length === 0) {
-        setReason("Please upload required documents");
-        return false;
-      }
       return true;
     }
+
 
     // Substep 2: Terms and Agreements
     if (currentSubStep === 2) {
@@ -184,6 +181,26 @@ const RegistrationFooter = ({ onCancel, onNext, onPrev, currentStep, maxSteps, n
     return true;
   };
 
+  const validateStep5 = () => {
+    // Stage 5 for Doctor: Package & Payment
+    const currentSubStep = formData.step5SubStep || 1;
+    if (!formData.selectedPlan) {
+      setReason("Please select a plan");
+      return false;
+    }
+
+    if (currentSubStep === 2) {
+      if (formData.selectedPlan !== 'trial' && !formData.agreedToTerms) {
+        setReason("Please agree to terms and conditions");
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+
+
   const validateHosStep3 = () => {
     // Determine sub-step from global formData
     const subStep = Number(formData.hosStep3SubStep || 1);
@@ -195,11 +212,7 @@ const RegistrationFooter = ({ onCancel, onNext, onPrev, currentStep, maxSteps, n
     } = hosStep3;
 
     if (subStep === 1) {
-      console.log('Hos_3 Debug: Validating Substep 1', {
-        name, type, emailId, phone, city, state, pincode,
-        addressBlock: address?.blockNo, addressStreet: address?.street,
-        image, url
-      });
+      
 
       const val = (v) => String(v || '').trim();
 
@@ -215,13 +228,11 @@ const RegistrationFooter = ({ onCancel, onNext, onPrev, currentStep, maxSteps, n
       if (!val(address?.blockNo)) { setReason('Missing Block/Shop No'); return false; }
       if (!val(address?.street)) { setReason('Missing Street'); return false; }
       if (!image) { setReason('Missing Hospital Image'); return false; }
-      if (!val(url)) { setReason('Missing Hospital URL'); return false; }
-
       // Strict Regex checks
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val(emailId))) { setReason('Invalid Email Format'); return false; }
       if (!/^\d{10}$/.test(val(phone))) { setReason('Phone must be 10 digits'); return false; }
       if (!/^\d{6}$/.test(val(pincode))) { setReason('Pincode must be 6 digits'); return false; }
-      if (!/^(https?:\/\/)?[a-zA-Z0-9.-]+$/.test(val(url))) { setReason('Invalid URL Format'); return false; }
+      if (val(url) && !/^(https?:\/\/)?[a-zA-Z0-9.-]+$/.test(val(url))) { setReason('Invalid URL Format'); return false; }
 
       if (noOfBeds && (isNaN(noOfBeds) || Number(noOfBeds) < 0)) { setReason('Invalid Beds Count'); return false; }
 
@@ -243,11 +254,11 @@ const RegistrationFooter = ({ onCancel, onNext, onPrev, currentStep, maxSteps, n
 
     // Required Fields & Docs
     if (!gstin) { setReason('Missing GSTIN'); return false; }
-    if (!getDoc('GST_PROOF')) { setReason('Missing GST Proof'); return false; }
+    // if (!getDoc('GST_PROOF')) { setReason('Missing GST Proof'); return false; }
     if (!stateHealthReg) { setReason('Missing State Registration'); return false; }
-    if (!getDoc('STATE_HEALTH_REG_PROOF')) { setReason('Missing Reg Proof'); return false; }
+    // if (!getDoc('STATE_HEALTH_REG_PROOF')) { setReason('Missing Reg Proof'); return false; }
     if (!panCard) { setReason('Missing PAN'); return false; }
-    if (!getDoc('PAN_CARD')) { setReason('Missing PAN Proof'); return false; }
+    // if (!getDoc('PAN_CARD')) { setReason('Missing PAN Proof'); return false; }
 
     // Conditional
     if (hasCin === 1 && !cinNumber) { setReason('Missing CIN'); return false; }
@@ -274,9 +285,10 @@ const RegistrationFooter = ({ onCancel, onNext, onPrev, currentStep, maxSteps, n
   if (registrationType === 'doctor') {
     if (currentStep === 1) isNextDisabled = !validateStep1();
     else if (currentStep === 2) isNextDisabled = !validateStep2();
-    else if (currentStep === 3) isNextDisabled = !validateStep3();
-    else if (currentStep === 4) isNextDisabled = !validateStep4();
+    else if (currentStep === 3) isNextDisabled = !validateStep4(); // Review & Create
+    else if (currentStep === 4) isNextDisabled = !validateStep5(); // Package & Payment
   } else if (isHospital) {
+
     if (formData.isDoctor === 'no') {
       // Mapping for Non-Doctor Owner
       if (currentStep === 1) isNextDisabled = !validateHosStep1();
@@ -315,7 +327,7 @@ const RegistrationFooter = ({ onCancel, onNext, onPrev, currentStep, maxSteps, n
   return (
     <footer className="flex-shrink-0 px-6 py-6 border-t border-gray-200 flex justify-between bg-white text-sm">
       <button onClick={onCancel} className="ml-6 w-[200px] h-8 flex items-center justify-center rounded-sm border border-secondary-grey200 hover:bg-secondary-grey50 transition-colors text-secondary-grey400">
-        Cancel
+        {cancelLabel}
       </button>
 
       <div className="flex gap-5 items-center px-6">

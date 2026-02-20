@@ -18,7 +18,7 @@ function HospitalList() {
 
   useEffect(() => {
     if (isAuthed) {
-      fetchHospitals();
+      fetchHospitals(true); // Force fetch to get latest data
     }
   }, [isAuthed, fetchHospitals]);
 
@@ -95,7 +95,7 @@ function HospitalList() {
   }, [hospitalsAll, selected]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-50px)] bg-white overflow-hidden relative">
+    <div className="flex flex-col w-[1486px] h-[833px] gap-[16px] bg-white rounded-[12px] overflow-hidden relative">
       {!loading && (
         <div className="shrink-0 mt-2 z-10 px-3">
           <Header
@@ -116,7 +116,7 @@ function HospitalList() {
 
       {loading && (
         <div className="flex items-center justify-center bg-white h-full">
-          <UniversalLoader size={30}  />
+          <UniversalLoader size={30} />
         </div>
       )}
 

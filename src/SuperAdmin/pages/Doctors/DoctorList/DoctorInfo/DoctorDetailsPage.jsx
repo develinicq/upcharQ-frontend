@@ -34,13 +34,10 @@ const DoctorDetailsPage = () => {
       try {
         // prefer userId from route param; fallback to state.doctor.userId
         const userId = decodeURIComponent(String(id || "")).trim() || location.state?.doctor?.userId;
-        console.log("DoctorDetailsPage: userId extracted:", userId);
 
         if (!userId) throw new Error("Doctor userId is missing");
 
-        console.log("DoctorDetailsPage: Fetching data for:", userId);
         const resp = await getDoctorDetailsByIdBySuperAdmin(userId);
-        console.log("DoctorDetailsPage: API Success:", resp);
 
         if (ignore) return;
         const d = resp?.data || {};
@@ -77,7 +74,6 @@ const DoctorDetailsPage = () => {
           rating: d?.rating || 'N/A', // Added rating mapping
           // ... map other fields ensuring they match UI expectations
         };
-        console.log("DoctorDetailsPage: Mapped doctor object:", mapped);
         setDoctor(mapped);
         setBreadcrumbName(mapped.name);
         // Initialize selected clinic from API data if available
@@ -89,7 +85,6 @@ const DoctorDetailsPage = () => {
         // Fallback: prefer route state if present
         const stateDoc = location.state?.doctor;
         if (stateDoc) {
-          console.log("DoctorDetailsPage: Falling back to navigation state data.");
           const mapped = {
             id: stateDoc.id || stateDoc.docId,
             userId: stateDoc.userId,

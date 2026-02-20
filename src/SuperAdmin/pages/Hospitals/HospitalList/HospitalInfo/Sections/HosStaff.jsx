@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { Eye, MoreVertical, X, ChevronDown } from 'lucide-react'
-import AvatarCircle from '../../../../components/AvatarCircle'
+import AvatarCircle from '@/components/AvatarCircle'
 
 const initialStaff = [
   {
@@ -67,7 +67,7 @@ const InviteDrawer = ({ open, onClose, onSubmit }) => {
   const handleSend = () => {
     if (!canSend) return
     onSubmit({
-      id: `U-${Math.floor(1000 + Math.random()*9000)}`,
+      id: `U-${Math.floor(1000 + Math.random() * 9000)}`,
       name: name.trim(),
       role,
       email: email.trim(),

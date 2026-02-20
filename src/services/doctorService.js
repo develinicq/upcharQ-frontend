@@ -435,3 +435,51 @@ export const updateOutOfOfficeStatus = async (payload) => {
     throw error;
   }
 };
+
+// Update doctor status for Hospital Admin
+export const updateDoctorStatusForHospital = async (doctorId, hospitalId, status) => {
+  if (!doctorId || !hospitalId || !status) throw new Error("doctorId, hospitalId and status are required");
+  try {
+    const res = await axios.put(`/doctors/for-hospital-admin/status/${encodeURIComponent(doctorId)}`, { status }, {
+      params: { hospitalId }
+    });
+    return res.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Delete doctor profile for Hospital Admin
+export const deleteDoctorProfileForHospitalAdmin = async (doctorId, hospitalId) => {
+  if (!doctorId || !hospitalId) throw new Error("doctorId and hospitalId are required");
+  try {
+    const res = await axios.delete(`/doctors/for-hospital-admin/profile/${encodeURIComponent(doctorId)}`, {
+      params: { hospitalId }
+    });
+    return res.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Update doctor status for Super Admin
+export const updateDoctorStatusForSuperAdmin = async (doctorId, status) => {
+  if (!doctorId || !status) throw new Error("doctorId and status are required");
+  try {
+    const res = await axios.put(`/doctors/forSuperAdmin/status/${encodeURIComponent(doctorId)}`, { status });
+    return res.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Delete doctor profile and account for Super Admin
+export const deleteDoctorProfileBySuperAdmin = async (doctorId) => {
+  if (!doctorId) throw new Error("doctorId is required");
+  try {
+    const res = await axios.delete(`/doctors/forSuperAdmin/profile/${encodeURIComponent(doctorId)}`);
+    return res.data;
+  } catch (error) {
+    throw error;
+  }
+};

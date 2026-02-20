@@ -2,8 +2,12 @@ import React from 'react';
 import TableHeader from '../../../../components/TableHeader';
 import AvatarCircle from '../../../../components/AvatarCircle';
 import Badge from '../../../../components/Badge';
-import { MoreVertical, Eye, Star, CalendarClock, Briefcase, Link, UserX, Trash2 } from 'lucide-react';
+import { MoreVertical, Eye, Star, CalendarClock, Briefcase, Link, UserX, Trash2, UserCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import useSuperAdminListStore from '../../../../store/useSuperAdminListStore';
+import { deleteDoctorProfileBySuperAdmin, updateDoctorStatusForSuperAdmin } from '../../../../services/doctorService';
+import useToastStore from '../../../../store/useToastStore';
+
 const eye = '/black_eye.png';
 const more = '/more_black.png'
 const star = '/star.png'
@@ -99,6 +103,7 @@ const ActionCell = ({ row }) => {
     const [position, setPosition] = React.useState({ top: 0, left: 0 });
     const menuRef = React.useRef(null);
     const buttonRef = React.useRef(null);
+    const { addToast } = useToastStore();
 
     const openDoctor = (e) => {
         e.stopPropagation();
@@ -144,11 +149,42 @@ const ActionCell = ({ row }) => {
         setIsOpen(!isOpen);
     };
 
-    const handleAction = (action, e) => {
+
+    const fetchDoctors = useSuperAdminListStore((s) => s.fetchDoctors);
+    const [loading, setLoading] = React.useState(false);
+
+    const handleAction = async (action, e) => {
         e.stopPropagation();
-        console.log(`Action: ${action}`, row);
         setIsOpen(false);
+        const doctorId = row.userId || row.id;
+
+        try {
+            if (action === 'Mark as Inactive' || action === 'Mark as Active') {
+                const newStatus = action === 'Mark as Inactive' ? 'INACTIVE' : 'ACTIVE';
+                setLoading(true);
+                await updateDoctorStatusForSuperAdmin(doctorId, newStatus);
+                addToast({ title: 'Success', message: `Doctor marked as ${newStatus.toLowerCase()}`, type: 'success' });
+                fetchDoctors(true);
+            } else if (action === 'Delete Profile') {
+                if (!window.confirm("Are you sure you want to permanently delete this doctor's profile and account? This action cannot be undone.")) {
+                    return;
+                }
+                setLoading(true);
+                await deleteDoctorProfileBySuperAdmin(doctorId);
+                addToast({ title: 'Success', message: 'Doctor profile deleted successfully', type: 'success' });
+                fetchDoctors(true);
+            } else {
+            }
+        } catch (error) {
+            console.error(error);
+            const msg = error?.response?.data?.message || error?.message || "Action failed";
+            window.alert(msg);
+        } finally {
+            setLoading(false);
+        }
     };
+
+    const isInactive = String(row.status || '').toUpperCase() === 'INACTIVE';
 
     return (
         <div className="flex items-center justify-center gap-2 relative">
@@ -205,13 +241,23 @@ const ActionCell = ({ row }) => {
                         <img src={linkIconLocal} alt="" className="w-5 h-5" />
                         Send Magic Link
                     </button>
-                    <button
-                        onClick={(e) => handleAction('Mark as Inactive', e)}
-                        className="w-full text-left px-[18px] py-2 text-secondary-grey400 font-normal text-sm hover:bg-gray-50 flex items-center gap-2"
-                    >
-                        <img src={inactiveIcon} alt="" className="w-5 h-5" />
-                        Mark as Inactive
-                    </button>
+                    {isInactive ? (
+                        <button
+                            onClick={(e) => handleAction('Mark as Active', e)}
+                            className="w-full text-left px-[18px] py-2 text-secondary-grey400 font-normal text-sm hover:bg-gray-50 flex items-center gap-2"
+                        >
+                            <UserCheck className="w-5 h-5 text-green-600" />
+                            Mark as Active
+                        </button>
+                    ) : (
+                        <button
+                            onClick={(e) => handleAction('Mark as Inactive', e)}
+                            className="w-full text-left px-[18px] py-2 text-secondary-grey400 font-normal text-sm hover:bg-gray-50 flex items-center gap-2"
+                        >
+                            <img src={inactiveIcon} alt="" className="w-5 h-5" />
+                            Mark as Inactive
+                        </button>
+                    )}
 
                     <div className="mx-2 h-[0.5px] bg-[#E0E7FF] my-1.5 line-height-0"></div>
 
@@ -403,6 +449,100 @@ export const draftColumns = [
         header: <TableHeader label="Draft Date" />,
         width: 140,
         render: (row) => <span className=" text-secondary-grey300">{toDash(row.draftDate)}</span>
+    },
+    {
+        key: 'contact',
+        header: <TableHeader label="Contact Number" />,
+        width: 160,
+        render: (row) => <span className="text-secondary-grey300">{toDash(row.contact)}</span>
+    },
+    {
+        key: 'email',
+        header: <TableHeader label="Email" />,
+        width: 220,
+        cellClass: "whitespace-normal break-words text-secondary-grey400",
+        render: (row) => <span className="text-secondary-grey300">{toDash(row.email)}</span>
+    },
+    {
+        key: 'location',
+        header: <TableHeader label="Location" />,
+        width: 160,
+        render: (row) =>
+            <div className='h-[22px] px-[6px] flex bg-secondary-grey50 rounded-sm w-fit'>
+                <span className="text-secondary-grey400">{formatLocationShort(row.location)}</span>
+            </div>
+
+    },
+    {
+        key: 'specialization',
+        header: <TableHeader label="Specializations" />,
+        width: 200,
+        render: (row) => (
+            <div className="flex items-center gap-2 flex-wrap">
+                {row.specialization?.includes('/') ? (
+                    <Badge size="s" type="ghost" color="gray" className="!h-6 !text-[12px] !px-2 whitespace-nowrap">
+                        {row.specialization}
+                    </Badge>
+                ) : (
+                    <span className="text-secondary-grey300">{toDash(row.specialization)}</span>
+                )}
+                {row.specializationMore ? (
+                    <Badge size="s" type="ghost" color="gray" className="!h-5 !text-[11px] !px-1.5">
+                        +{row.specializationMore}
+                    </Badge>
+                ) : null}
+            </div>
+        ),
+    },
+    {
+        key: 'designation',
+        header: <TableHeader label="Designation" />,
+        width: 240,
+        cellClass: "whitespace-normal break-words text-secondary-grey400",
+        render: (row) => <span className="text-secondary-grey300">{toDash(row.designation)}</span>
+    },
+    {
+        key: 'actions',
+        header: <TableHeader label="Actions" showIcon={false} />,
+        width: 110,
+        sticky: 'right',
+        align: 'center',
+        render: (row) => <ActionCell row={row} />,
+    },
+];
+
+export const invitedColumns = [
+    {
+        key: 'name',
+        header: <TableHeader label="Doctors" />,
+        width: 320,
+        sticky: 'left',
+        headerClassName: 'pl-[52px]',
+        render: (row) => {
+            const statusStr = String(row.status || '').toUpperCase();
+            const isActive = statusStr === 'ACTIVE';
+            return (
+                <div className="flex items-center gap-2">
+                    <div className='relative'>
+                        <AvatarCircle name={row.name} size="s" color={isActive ? "orange" : "grey"} />
+                        {isActive && <img src={tick} alt="" className='w-4 absolute -top-1 -right-1' />}
+                    </div>
+                    <div className='flex flex-col text-sm'>
+                        <p className="font-medium text-secondary-grey400 leading-5">{toDash(row.name)}</p>
+                        <p className=" text-secondary-grey400">
+                            {row.gender ? `${String(row.gender).charAt(0).toUpperCase()} | ` : ''}
+                            {toDash(row.exp)}
+                        </p>
+                    </div>
+                </div>
+            )
+        },
+    },
+    {
+        key: 'startDate',
+        header: <TableHeader label="Invited Date" />,
+        width: 140,
+        render: (row) => <span className=" text-secondary-grey300">{toDash(row.startDate)}</span>
     },
     {
         key: 'contact',

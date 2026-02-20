@@ -225,7 +225,7 @@ const Info = ({ doctor }) => {
     const [pubEditMode, setPubEditMode] = useState("add");
     const [expEditMode, setExpEditMode] = useState("add");
 
-    const onFileView = (fileName) => { console.log("View file:", fileName); };
+    const onFileView = (fileName) => {  };
 
     // Local helper to format a date string into 'Mon YYYY'. Accepts ISO/date-like strings.
     const formatMonthYear = (dateStr) => {
@@ -687,7 +687,6 @@ const Info = ({ doctor }) => {
                 onClose={() => setBasicOpen(false)}
                 initialData={basic}
                 onSave={(data) => {
-                    console.log("SuperAdmin updated basic info (mock):", data);
                     setBasicOpen(false);
                 }}
             />
@@ -698,7 +697,6 @@ const Info = ({ doctor }) => {
                 mode={eduEditMode}
                 initial={eduEditData}
                 onSave={(data) => {
-                    console.log("SuperAdmin updated education (mock):", data);
                     setEduOpen(false);
                 }}
             />
@@ -709,7 +707,6 @@ const Info = ({ doctor }) => {
                 mode={awardEditMode}
                 initial={awardEditData}
                 onSave={(data) => {
-                    console.log("SuperAdmin updated award (mock):", data);
                     setAwardOpen(false);
                 }}
             />
@@ -720,7 +717,6 @@ const Info = ({ doctor }) => {
                 mode={pubEditMode}
                 initial={pubEditData}
                 onSave={(data) => {
-                    console.log("SuperAdmin updated publication (mock):", data);
                     setPubOpen(false);
                 }}
             />
@@ -730,7 +726,6 @@ const Info = ({ doctor }) => {
                 onClose={() => setPracticeOpen(false)}
                 initial={practiceDetails}
                 onSave={(data) => {
-                    console.log("SuperAdmin updated practice (mock):", data);
                     setPracticeOpen(false);
                 }}
             />
@@ -741,7 +736,6 @@ const Info = ({ doctor }) => {
                 mode={expEditMode}
                 initial={expEditData}
                 onSave={(data) => {
-                    console.log("SuperAdmin updated experience (mock):", data);
                     setExpOpen(false);
                 }}
             />

@@ -345,10 +345,16 @@ const Details = ({ hospital }) => {
           bloodBankPhone: hInfo.bloodBankContactNumber ?? prev.bloodBankPhone,
           about: hInfo.about ?? prev.about,
           photos: Array.isArray(hInfo.hospitalPhotos) ? hInfo.hospitalPhotos : (prev.photos || []),
+          specialties: Array.isArray(infoAdr?.data?.medicalSpecialties || hInfo.specialties)
+            ? (infoAdr?.data?.medicalSpecialties || hInfo.specialties).map(s => s?.specialty?.name || s?.name || s)
+            : (prev.specialties || []),
+          services: Array.isArray(infoAdr?.data?.hospitalServices || hInfo.services)
+            ? (infoAdr?.data?.hospitalServices || hInfo.services).map(s => s?.name || s)
+            : (prev.services || []),
           address: {
             ...prev.address,
-            blockNo: hAddr.blockBuildingName,
-            street: hAddr.roadAreaStreet,
+            blockNo: hAddr.blockNo || hAddr.blockBuildingName,
+            street: hAddr.street || hAddr.roadAreaStreet,
             landmark: hAddr.landmark,
             pincode: hAddr.pincode,
           },
@@ -373,8 +379,8 @@ const Details = ({ hospital }) => {
             ...prev.admin,
             firstName: admin.firstName,
             lastName: admin.lastName,
-            phone: admin.mobileNumber,
-            emailId: admin.email,
+            phone: admin.phone,
+            emailId: admin.emailId,
             gender: admin.gender,
             city: admin.city,
             designation: admin.designation,
@@ -505,58 +511,57 @@ const Details = ({ hospital }) => {
             setOpenInfoDrawer(true);
           }}
         >
-          {errorInfo ? (
-            <div className="text-red-600 bg-red-50 border border-red-200 p-3 rounded">{String(errorInfo)}</div>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                <InfoField label="Hospital Name" value={profile.hospitalName} />
-                <InfoField label="Hospital Type" value={profile.type} />
-                <InfoField label="Mobile Number" value={profile.phone} right={<VerifiedBadge />} />
-                <InfoField label="Email" value={profile.email} right={<VerifiedBadge />} />
-                <InfoField label="Establishment Date" value={profile.estDate} />
-
-                {/* Establishment Proof */}
-                <div>
-                  <div className="text-[14px] text-secondary-grey200 mb-1">Establishment Proof</div>
-                  <InputWithMeta
-                    imageUpload={true}
-                    fileName={"Establishment.pdf"}
-                    onFileView={(f) => console.log('view', f)}
-                    showInput={false}
-                  />
-                </div>
-
-                <InfoField label="Website" value={profile.website} />
-                <InfoField label="Emergency Contact Number" value={profile.emergencyPhone} />
-                <InfoField label="Number of Beds" value={profile.beds} />
-                <InfoField label="Number of ICU Beds" value={profile.icuBeds} />
-                <InfoField label="Number of Ambulances" value={profile.ambulances} />
-                <InfoField label="Ambulance Contact Number" value={profile.ambulancePhone} />
-                <InfoField label="Do you have Blood Bank" value={profile.bloodBank ? "Yes" : "No"} />
-                <InfoField label="Blood Bank Contact Number" value={profile.bloodBankPhone} />
-              </div>
-              <div className="pt-4 pb-4">
-                <div className="text-sm text-secondary-grey200 mb-1">About</div>
-                <p className="text-sm leading-relaxed text-secondary-grey400">{profile.about}</p>
-              </div>
-
-              <InputWithMeta
-                label="Hospital Photos"
-                showInput={false}
-              >
-              </InputWithMeta>
-              <div className="flex gap-4 overflow-x-auto pb-1">
-                {resolvedPhotos && resolvedPhotos.length > 0 ? (
-                  resolvedPhotos.map((src, i) => (
-                    <img key={i} src={src} alt="hospital" className="w-[120px] h-[120px] rounded-md object-cover border border-gray-100" />
-                  ))
-                ) : (
-                  <div className="text-sm text-secondary-grey200 ">No Photos</div>
-                )}
-              </div>
-            </>
+          {errorInfo && (
+            <div className="text-red-600 bg-red-50 border border-red-200 p-3 rounded mb-4">{String(errorInfo)}</div>
           )}
+          <>
+            <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+              <InfoField label="Hospital Name" value={profile.hospitalName} />
+              <InfoField label="Hospital Type" value={profile.type} />
+              <InfoField label="Mobile Number" value={profile.phone} right={<VerifiedBadge />} />
+              <InfoField label="Email" value={profile.email} right={<VerifiedBadge />} />
+              <InfoField label="Establishment Date" value={profile.estDate} />
+
+              {/* Establishment Proof */}
+              <div>
+                <div className="text-[14px] text-secondary-grey200 mb-1">Establishment Proof</div>
+                <InputWithMeta
+                  imageUpload={true}
+                  fileName={"Establishment.pdf"}
+                  onFileView={(f) => {}}
+                  showInput={false}
+                />
+              </div>
+
+              <InfoField label="Website" value={profile.website} />
+              <InfoField label="Emergency Contact Number" value={profile.emergencyPhone} />
+              <InfoField label="Number of Beds" value={profile.beds} />
+              <InfoField label="Number of ICU Beds" value={profile.icuBeds} />
+              <InfoField label="Number of Ambulances" value={profile.ambulances} />
+              <InfoField label="Ambulance Contact Number" value={profile.ambulancePhone} />
+              <InfoField label="Do you have Blood Bank" value={profile.bloodBank ? "Yes" : "No"} />
+              <InfoField label="Blood Bank Contact Number" value={profile.bloodBankPhone} />
+            </div>
+            <div className="pt-4 pb-4">
+              <div className="text-sm text-secondary-grey200 mb-1">About</div>
+              <p className="text-sm leading-relaxed text-secondary-grey400">{profile.about}</p>
+            </div>
+
+            <InputWithMeta
+              label="Hospital Photos"
+              showInput={false}
+            >
+            </InputWithMeta>
+            <div className="flex gap-4 overflow-x-auto pb-1">
+              {resolvedPhotos && resolvedPhotos.length > 0 ? (
+                resolvedPhotos.map((src, i) => (
+                  <img key={i} src={src} alt="hospital" className="w-[120px] h-[120px] rounded-md object-cover border border-gray-100" />
+                ))
+              ) : (
+                <div className="text-sm text-secondary-grey200 ">No Photos</div>
+              )}
+            </div>
+          </>
         </SectionCard>
 
         {/* --- Drawers --- */}
@@ -722,31 +727,29 @@ const Details = ({ hospital }) => {
           setActiveDrawerSection('address');
           setOpenInfoDrawer(true);
         }}>
-          {
-            errorInfo ? (
-              <div className="text-red-600 bg-red-50 border border-red-200 p-3 rounded" > {String(errorInfo)}</div>
-            ) : (
-              <>
-                <InputWithMeta label="Map Location" showInput={false} infoIcon />
-                <div className="h-[100px] bg-gray-100 rounded-lg border border-gray-200 mb-3 overflow-hidden relative">
-                  <MapLocation initialPosition={profile?.mapLocation ? [profile.mapLocation.lat, profile.mapLocation.lng] : null} heightClass="h-[100px]" />
-                </div>
-                <div className="grid grid-cols-1 gap-3">
-                  <div className="grid grid-cols-2 gap-8">
-                    <InfoField label="Block no./Shop no./House no." value={profile.address?.blockNo || profile.address?.block} />
-                    <InfoField label="Road/Area/Street" value={profile.address?.street || profile.address?.road} />
-                  </div>
-                  <div className="grid grid-cols-2 gap-8">
-                    <InfoField label="Landmark" value={profile.address?.landmark} />
-                    <InfoField label="Pincode" value={profile.address?.pincode} />
-                  </div>
-                  <div className="grid grid-cols-2 gap-8">
-                    <InfoField label="City" value={profile.city} />
-                    <InfoField label="State" value={profile.state} />
-                  </div>
-                </div>
-              </>
-            )}
+          {errorInfo && (
+            <div className="text-red-600 bg-red-50 border border-red-200 p-3 rounded mb-3">{String(errorInfo)}</div>
+          )}
+          <>
+            <InputWithMeta label="Map Location" showInput={false} infoIcon />
+            <div className="h-[100px] bg-gray-100 rounded-lg border border-gray-200 mb-3 overflow-hidden relative">
+              <MapLocation initialPosition={profile?.mapLocation ? [profile.mapLocation.lat, profile.mapLocation.lng] : null} heightClass="h-[100px]" />
+            </div>
+            <div className="grid grid-cols-1 gap-3">
+              <div className="grid grid-cols-2 gap-8">
+                <InfoField label="Block no./Shop no./House no." value={profile.address?.blockNo || profile.address?.block} />
+                <InfoField label="Road/Area/Street" value={profile.address?.street || profile.address?.road} />
+              </div>
+              <div className="grid grid-cols-2 gap-8">
+                <InfoField label="Landmark" value={profile.address?.landmark} />
+                <InfoField label="Pincode" value={profile.address?.pincode} />
+              </div>
+              <div className="grid grid-cols-2 gap-8">
+                <InfoField label="City" value={profile.city} />
+                <InfoField label="State" value={profile.state} />
+              </div>
+            </div>
+          </>
         </SectionCard >
 
         {/* Primary Admin */}
@@ -754,21 +757,19 @@ const Details = ({ hospital }) => {
           setActiveDrawerSection('admin');
           setOpenInfoDrawer(true);
         }} >
-          {
-            errorAdmin ? (
-              <div className="text-error-400 text-sm" > {String(errorAdmin)}</div>
-            ) : (
-              <div className="grid grid-cols-2 gap-x-7 gap-y-3">
-                <InfoField label="First Name" value={profile.admin?.firstName || (profile.admin?.name || '').split(' ')[0]} />
-                <InfoField label="Last Name" value={profile.admin?.lastName || (profile.admin?.name || '').split(' ').slice(1).join(' ')} />
-                <InfoField label="Mobile Number" value={profile.admin?.phone} right={<VerifiedBadge />} />
-                <InfoField label="Email" value={profile.admin?.emailId || profile.admin?.email} right={<VerifiedBadge />} />
-                <InfoField label="Gender" value={profile.admin?.gender} />
-                <InfoField label="City" value={profile.admin?.city} />
-                <InfoField label="Designation" value={profile.admin?.designation || "Super Admin"} />
-                <InfoField label="Role" value={profile.admin?.role || "Admin"} />
-              </div>
-            )}
+          {errorAdmin && (
+            <div className="text-error-400 text-sm mb-3">{String(errorAdmin)}</div>
+          )}
+          <div className="grid grid-cols-2 gap-x-7 gap-y-3">
+            <InfoField label="First Name" value={profile.admin?.firstName || (profile.admin?.name || '').split(' ')[0]} />
+            <InfoField label="Last Name" value={profile.admin?.lastName || (profile.admin?.name || '').split(' ').slice(1).join(' ')} />
+            <InfoField label="Mobile Number" value={profile.admin?.phone} right={<VerifiedBadge />} />
+            <InfoField label="Email" value={profile.admin?.emailId || profile.admin?.email} right={<VerifiedBadge />} />
+            <InfoField label="Gender" value={profile.admin?.gender} />
+            <InfoField label="City" value={profile.admin?.city} />
+            <InfoField label="Designation" value={profile.admin?.designation || "Super Admin"} />
+            <InfoField label="Role" value={profile.admin?.role || "Admin"} />
+          </div>
         </SectionCard >
 
         {/* Verification Documents */}
@@ -776,111 +777,108 @@ const Details = ({ hospital }) => {
           {loadingDocs && (
             <div className="w-full flex items-center justify-center h-28"><UniversalLoader size={24} /></div>
           )}
-          {
-            !loadingDocs && errorDocs && (
-              <div className="text-red-600 bg-red-50 border border-red-200 p-3 rounded">{String(errorDocs)}</div>
-            )
-          }
-          {
-            !loadingDocs && !errorDocs && (
-              docs.length === 0 ? (
-                <div className="text-sm text-secondary-grey400">No documents found.</div>
-              ) : (
-                <div className="space-y-3">
-                  {gstDoc && (
-                    <div className='flex flex-col gap-2'>
-                      <h4 className="text-sm font-medium text-secondary-grey400">
-                        <span className="relative inline-block pb-2">
-                          GST Details
-                          <span className="absolute left-1/2 bottom-0 h-[2px] w-full -translate-x-3/4 scale-x-50 bg-blue-primary150/50"></span>
-                        </span>
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-7">
-                        <div><InfoField label="GST Number" value={gstDoc.docNo || '-'} /></div>
-                        <div>
-                          <div className="text-[14px] text-secondary-grey200 mb-1">Proof of GST Registration</div>
-                          <InputWithMeta imageUpload={true} fileName={'GST Document'} onFileView={() => { const url = resolvedDocUrls[gstDoc.id]; if (url) window.open(url, '_blank'); }} showInput={false} />
-                        </div>
+          {!loadingDocs && errorDocs && (
+            <div className="text-red-600 bg-red-50 border border-red-200 p-3 rounded mb-3">{String(errorDocs)}</div>
+          )}
+          {!loadingDocs && (
+            docs.length === 0 ? (
+              <div className="text-sm text-secondary-grey400">No documents found.</div>
+            ) : (
+              <div className="space-y-3">
+                {gstDoc && (
+                  <div className='flex flex-col gap-2'>
+                    <h4 className="text-sm font-medium text-secondary-grey400">
+                      <span className="relative inline-block pb-2">
+                        GST Details
+                        <span className="absolute left-1/2 bottom-0 h-[2px] w-full -translate-x-3/4 scale-x-50 bg-blue-primary150/50"></span>
+                      </span>
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-7">
+                      <div><InfoField label="GST Number" value={gstDoc.docNo || '-'} /></div>
+                      <div>
+                        <div className="text-[14px] text-secondary-grey200 mb-1">Proof of GST Registration</div>
+                        <InputWithMeta imageUpload={true} fileName={'GST Document'} onFileView={() => { const url = resolvedDocUrls[gstDoc.id]; if (url) window.open(url, '_blank'); }} showInput={false} />
                       </div>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {cinDoc && (
-                    <div className='flex flex-col gap-2'>
-                      <h4 className="text-sm font-medium text-secondary-grey400">
-                        <span className="relative inline-block pb-2">
-                          CIN Details
-                          <span className="absolute left-1/2 bottom-0 h-[2px] w-full -translate-x-3/4 scale-x-50 bg-blue-primary150/50"></span>
-                        </span>
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-7">
-                        <div><InfoField label="CIN Number" value={cinDoc.docNo || '-'} /></div>
-                        <div>
-                          <div className="text-[14px] text-secondary-grey200 mb-1">Proof of CIN Registration</div>
-                          <InputWithMeta imageUpload={true} fileName={'CIN Document'} onFileView={() => { const url = resolvedDocUrls[cinDoc.id]; if (url) window.open(url, '_blank'); }} showInput={false} />
-                        </div>
+                {cinDoc && (
+                  <div className='flex flex-col gap-2'>
+                    <h4 className="text-sm font-medium text-secondary-grey400">
+                      <span className="relative inline-block pb-2">
+                        CIN Details
+                        <span className="absolute left-1/2 bottom-0 h-[2px] w-full -translate-x-3/4 scale-x-50 bg-blue-primary150/50"></span>
+                      </span>
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-7">
+                      <div><InfoField label="CIN Number" value={cinDoc.docNo || '-'} /></div>
+                      <div>
+                        <div className="text-[14px] text-secondary-grey200 mb-1">Proof of CIN Registration</div>
+                        <InputWithMeta imageUpload={true} fileName={'CIN Document'} onFileView={() => { const url = resolvedDocUrls[cinDoc.id]; if (url) window.open(url, '_blank'); }} showInput={false} />
                       </div>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {shrDoc && (
-                    <div className='flex flex-col gap-2'>
-                      <h4 className="text-sm font-medium text-secondary-grey400">
-                        <span className="relative inline-block pb-2">
-                          State Health Registration
-                          <span className="absolute left-1/2 bottom-0 h-[2px] w-full -translate-x-3/4 scale-x-50 bg-blue-primary150/50"></span>
-                        </span>
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-7">
-                        <div><InfoField label="Registration Number" value={shrDoc.docNo || '-'} /></div>
-                        <div>
-                          <div className="text-[14px] text-secondary-grey200 mb-1">Proof Document</div>
-                          <InputWithMeta imageUpload={true} fileName={'State Health Reg Proof'} onFileView={() => { const url = resolvedDocUrls[shrDoc.id]; if (url) window.open(url, '_blank'); }} showInput={false} />
-                        </div>
+                {shrDoc && (
+                  <div className='flex flex-col gap-2'>
+                    <h4 className="text-sm font-medium text-secondary-grey400">
+                      <span className="relative inline-block pb-2">
+                        State Health Registration
+                        <span className="absolute left-1/2 bottom-0 h-[2px] w-full -translate-x-3/4 scale-x-50 bg-blue-primary150/50"></span>
+                      </span>
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-7">
+                      <div><InfoField label="Registration Number" value={shrDoc.docNo || '-'} /></div>
+                      <div>
+                        <div className="text-[14px] text-secondary-grey200 mb-1">Proof Document</div>
+                        <InputWithMeta imageUpload={true} fileName={'State Health Reg Proof'} onFileView={() => { const url = resolvedDocUrls[shrDoc.id]; if (url) window.open(url, '_blank'); }} showInput={false} />
                       </div>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {panDoc && (
-                    <div className='flex flex-col gap-2'>
-                      <h4 className="text-sm font-medium text-secondary-grey400">
-                        <span className="relative inline-block pb-2">
-                          PAN Card
-                          <span className="absolute left-1/2 bottom-0 h-[2px] w-full -translate-x-3/4 scale-x-50 bg-blue-primary150/50"></span>
-                        </span>
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-7">
-                        <div><InfoField label="PAN Number" value={panDoc.docNo || '-'} /></div>
-                        <div>
-                          <div className="text-[14px] text-secondary-grey200 mb-1">PAN Document</div>
-                          <InputWithMeta imageUpload={true} fileName={'PAN Card'} onFileView={() => { const url = resolvedDocUrls[panDoc.id]; if (url) window.open(url, '_blank'); }} showInput={false} />
-                        </div>
+                {panDoc && (
+                  <div className='flex flex-col gap-2'>
+                    <h4 className="text-sm font-medium text-secondary-grey400">
+                      <span className="relative inline-block pb-2">
+                        PAN Card
+                        <span className="absolute left-1/2 bottom-0 h-[2px] w-full -translate-x-3/4 scale-x-50 bg-blue-primary150/50"></span>
+                      </span>
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-7">
+                      <div><InfoField label="PAN Number" value={panDoc.docNo || '-'} /></div>
+                      <div>
+                        <div className="text-[14px] text-secondary-grey200 mb-1">PAN Document</div>
+                        <InputWithMeta imageUpload={true} fileName={'PAN Card'} onFileView={() => { const url = resolvedDocUrls[panDoc.id]; if (url) window.open(url, '_blank'); }} showInput={false} />
                       </div>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {otherDocs.length > 0 && (
-                    <div className="pt-2">
-                      <h5 className="text-sm font-medium text-secondary-grey400 mb-2">Other Documents</h5>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {otherDocs.map(d => (
-                          <div key={d.id} className="border border-secondary-grey100 rounded-md p-3 bg-white">
-                            <div className="text-sm text-secondary-grey400"><span className="font-medium">Type:</span> {d.docType.replaceAll('_', ' ')}</div>
-                            <div className="text-sm text-secondary-grey400"><span className="font-medium">Number:</span> {d.docNo || '-'}
-                            </div>
-                            <div className="mt-2">
-                              <button type="button" className="text-sm text-blue-600 hover:underline" onClick={() => { const url = resolvedDocUrls[d.id]; if (url) window.open(url, '_blank'); }}>
-                                View Document
-                              </button>
-                            </div>
+                {otherDocs.length > 0 && (
+                  <div className="pt-2">
+                    <h5 className="text-sm font-medium text-secondary-grey400 mb-2">Other Documents</h5>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {otherDocs.map(d => (
+                        <div key={d.id} className="border border-secondary-grey100 rounded-md p-3 bg-white">
+                          <div className="text-sm text-secondary-grey400"><span className="font-medium">Type:</span> {d.docType.replaceAll('_', ' ')}</div>
+                          <div className="text-sm text-secondary-grey400"><span className="font-medium">Number:</span> {d.docNo || '-'}
                           </div>
-                        ))}
-                      </div>
+                          <div className="mt-2">
+                            <button type="button" className="text-sm text-blue-600 hover:underline" onClick={() => { const url = resolvedDocUrls[d.id]; if (url) window.open(url, '_blank'); }}>
+                              View Document
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  )}
-                </div>
-              )
+                  </div>
+                )}
+              </div>
             )
+          )
           }
         </SectionCard >
 

@@ -30,7 +30,11 @@ export default function Surgery({ hospital }) {
                 setSurgeries(res.data?.surgeries || [])
             }
         } catch (error) {
-            console.error("Failed to fetch surgeries:", error)
+            console.error("Failed to fetch surgeries for SuperAdmin:", {
+                status: error?.response?.status,
+                message: error?.response?.data?.message || error.message,
+                error
+            })
         } finally {
             setLoading(false)
         }

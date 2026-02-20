@@ -26,7 +26,6 @@ const Doctor = ({ hospital }) => {
       setError(null)
       try {
         const hospitalId = hospital?.temp || hospital?.id || '';
-        console.log("Doctors Section: Fetching for hospitalId:", hospitalId);
 
         // If no ID (yet), maybe don't fetch or wait? 
         // Assuming we always have at least an ID if we are at this stage.
@@ -39,7 +38,6 @@ const Doctor = ({ hospital }) => {
         // Validate UUID to prevent 400 Bad Request
         const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(hospitalId);
         if (!isUuid) {
-          console.log("Doctors Section: hospitalId is not a UUID yet, waiting...", hospitalId);
           // Do not disable loading here if we expect it to eventually resolve to a UUID?
           // Or just set loading false?
           // If we stick in loading state forever it's bad.
@@ -53,7 +51,6 @@ const Doctor = ({ hospital }) => {
         const resp = await getDoctorsByHospitalIdForSuperAdmin(hospitalId, page, pageSize);
         if (ignore) return;
 
-        console.log("Doctors Section: API Response:", resp);
         const list = resp?.data?.doctors || [];
         // The API returns mixed status in one list. We need to filter for active/inactive tabs locally?
         // OR does the API return all and we bucket them?

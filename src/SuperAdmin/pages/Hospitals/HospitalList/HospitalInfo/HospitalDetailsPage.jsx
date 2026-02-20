@@ -52,11 +52,8 @@ const HospitalDetailsPage = () => {
         const backendId = stateHospital?.temp; // original DB id from backend list
         const urlParam = id ? decodeURIComponent(String(id)) : "";
         const hospitalId = backendId || urlParam;
-        console.log("HospitalDetailsPage: Resolving ID. backendId:", backendId, "urlParam:", urlParam, "Used:", hospitalId);
 
-        console.log("HospitalDetailsPage: calling getHospitalByIdBySuperAdmin...");
         const resp = await getHospitalByIdBySuperAdmin(hospitalId);
-        console.log("HospitalDetailsPage: API response:", resp);
 
         if (ignore) return;
 
@@ -81,12 +78,11 @@ const HospitalDetailsPage = () => {
           yearsOfExperience: d.yearsOfExperience,
 
           // Preserving older fields if they exist or defaulting
-          // logo/image not in sample, but assuming if they come they are at top level data or we use defaults
           logo: d.logo,
           image: d.image,
           noOfBeds: d.noOfBeds,
           userCount: d.userCount,
-          temp: backendId || d.id, // Persist UUID for API calls
+          temp: d._id || d.id || hospitalId, // Use backend primary key if returned, else fallback to used ID
         };
 
         setHospital(normalizedHospital);
@@ -200,7 +196,7 @@ const HospitalDetailsPage = () => {
     if (!id && !location?.state?.hospital) {
       return (
         <div className="flex items-center justify-center bg-white h-screen">
-          <UniversalLoader size={32}  />
+          <UniversalLoader size={32} />
         </div>
       );
     }
@@ -232,13 +228,12 @@ const HospitalDetailsPage = () => {
       upCharQId: hospital?.hospitalCode || hospital?.id || '-',
     },
   };
-  console.log("HospitalDetailsPage: Rendering Banner with:", bannerData);
 
   return (
     <div className='flex flex-col gap-6 w-full h-full'>
       <div>
         <HospitalBanner hospitalData={bannerData} isLoading={loading} />
-    
+
         <HospitalNav hospital={{ ...hospital, subscriptionName, specialties, documents }} />
       </div>
     </div>

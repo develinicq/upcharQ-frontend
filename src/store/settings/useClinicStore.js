@@ -21,7 +21,6 @@ const useClinicStore = create(
 
       // Fetch clinic info
       fetchClinicInfo: async (params) => {
-        console.log("useClinicStore fetchClinicInfo called with params:", params);
         set({ loading: true, error: null });
         try {
           // Robustly detect staff context: if we have isStaff flag or doctorId

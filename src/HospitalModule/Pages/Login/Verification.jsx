@@ -55,7 +55,13 @@ export default function HVerification({ onVerified }) {
 
   const handleVerify = () => {
     setSubmitting(true)
-    setTimeout(() => { setSubmitting(false); onVerified?.() }, 400)
+    setTimeout(() => {
+      setSubmitting(false);
+      onVerified?.({
+        mobileOtp: mobile.join(''),
+        emailOtp: email.join('')
+      })
+    }, 400)
   }
 
   return (

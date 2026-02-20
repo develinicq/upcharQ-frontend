@@ -231,7 +231,6 @@ export default function HospitalInfoDrawer({ open, onClose, onSave, initial = {}
 	};
 
 	const handleSave = async () => {
-		console.log("HospitalInfoDrawer: handleSave called. hospitalId:", hospitalId, "isDirty:", isDirty);
 		if (!hospitalId || !isDirty) return;
 		setLoading(true);
 
@@ -283,7 +282,6 @@ export default function HospitalInfoDrawer({ open, onClose, onSave, initial = {}
 		addIfChanged(adminData, "city", adminCity, initial.admin?.city);
 
 		try {
-			console.log("Calling update APIs with partial payloads. Hospital:", Object.keys(hospitalData), "Admin:", Object.keys(adminData));
 
 			const promises = [];
 			if (Object.keys(hospitalData).length > 0) {

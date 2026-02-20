@@ -34,10 +34,13 @@ const RegistrationSuccess = ({ name }) => {
                 {/* Success Message */}
                 <h1 className="text-[24px] font-bold text-secondary-grey400">
                     <span className="">{name}  Profile Activated Successfully</span>
-                    
                 </h1>
+                <p className="text-secondary-grey300 text-sm mt-3 max-w-[400px]">
+                    Invitation email has been sent successfully. <br />
+                    The doctor will receive a link to set up their account password and complete onboarding.
+                </p>
 
-                
+
             </div>
         </div>
     );

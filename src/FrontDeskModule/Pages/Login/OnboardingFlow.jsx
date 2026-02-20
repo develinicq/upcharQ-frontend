@@ -9,7 +9,8 @@ import FDActivated from './Activated'
 // Minimal flow wrapper for FrontDesk onboarding
 export default function FDOnboardingFlow() {
   const [searchParams] = useSearchParams()
-  const [step, setStep] = useState('verify') // 'verify' -> 'password' -> 'consent' -> 'activated'
+  const code = searchParams.get('code')
+  const [step, setStep] = useState(code ? 'verify' : 'restricted') // 'verify' -> 'password' -> 'consent' -> 'activated'
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -85,6 +86,26 @@ export default function FDOnboardingFlow() {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
   if (error) return <div className="min-h-screen flex items-center justify-center text-red-500">{error}</div>
+
+  if (step === 'restricted') {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 font-sans">
+        <div className="w-full max-w-md bg-white border border-gray-100 rounded-2xl p-10 text-center shadow-sm">
+          <div className="text-amber-500 text-5xl mb-6">🔐</div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">Access Restricted</h2>
+          <p className="text-gray-500 mb-8 text-sm leading-relaxed">
+            Please use the registration link sent to your email to complete your onboarding process.
+          </p>
+          <button
+            onClick={() => window.location.href = '/signin'}
+            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition shadow-md shadow-blue-100"
+          >
+            Go to Sign In
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (step === 'activated') return <FDActivated />
   if (step === 'consent') return <FDConsent onContinue={handleConsentContinue} />

@@ -2,13 +2,16 @@ import React from 'react';
 import TableHeader from '../../../components/TableHeader';
 import AvatarCircle from '../../../components/AvatarCircle';
 import Badge from '../../../components/Badge';
-import { MoreVertical, Eye, CalendarClock, Briefcase, Link, UserX, Trash2 } from 'lucide-react';
+import { MoreVertical, Eye, CalendarClock, Briefcase, Link, UserX, Trash2, UserCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
+import useHospitalAuthStore from '../../../store/useHospitalAuthStore';
+import useHospitalDataStore from '../../../store/hospital/useHospitalDataStore';
+import useToastStore from '../../../store/useToastStore';
+import { updateDoctorStatusForHospital, deleteDoctorProfileForHospitalAdmin } from '../../../services/doctorService';
 
 const eye = '/black_eye.png';
 const more = '/more_black.png';
-const tick = '/tick.png';
 
 const ActionCell = ({ row }) => {
     const navigate = useNavigate();
@@ -16,6 +19,11 @@ const ActionCell = ({ row }) => {
     const [position, setPosition] = React.useState({ top: 0, left: 0 });
     const menuRef = React.useRef(null);
     const buttonRef = React.useRef(null);
+
+    const { hospitalId } = useHospitalAuthStore();
+    const { doctors, setDoctors } = useHospitalDataStore();
+    const { addToast } = useToastStore();
+    const [loading, setLoading] = React.useState(false);
 
     const openDoctor = (e) => {
         e.stopPropagation();
@@ -61,11 +69,67 @@ const ActionCell = ({ row }) => {
         setIsOpen(!isOpen);
     };
 
-    const handleAction = (action, e) => {
+    const handleAction = async (action, e) => {
         e.stopPropagation();
-        console.log(`Action: ${action}`, row);
         setIsOpen(false);
+
+        if (!hospitalId) {
+            addToast({ title: 'Error', message: 'Hospital ID missing', type: 'error' });
+            return;
+        }
+
+        const doctorId = row.userId || row.id;
+
+        try {
+            if (action === 'Mark as Inactive' || action === 'Mark as Active') {
+                const newStatus = action === 'Mark as Inactive' ? 'INACTIVE' : 'ACTIVE';
+                setLoading(true);
+                await updateDoctorStatusForHospital(doctorId, hospitalId, newStatus);
+
+                // Update local list
+                const updatedDoctors = doctors.map(d =>
+                    (d.userId === doctorId || d.id === doctorId)
+                        ? { ...d, status: newStatus === 'ACTIVE' ? 'Active' : 'Inactive' }
+                        : d
+                );
+                setDoctors(updatedDoctors);
+
+                addToast({
+                    title: 'Success',
+                    message: `Doctor marked as ${newStatus.toLowerCase()}`,
+                    type: 'success'
+                });
+            } else if (action === 'Delete Profile') {
+                if (!window.confirm('Are you sure you want to delete this doctor profile? This action cannot be undone.')) {
+                    return;
+                }
+                setLoading(true);
+                await deleteDoctorProfileForHospitalAdmin(doctorId, hospitalId);
+
+                // Update local list
+                const updatedDoctors = doctors.filter(d => (d.userId !== doctorId && d.id !== doctorId));
+                setDoctors(updatedDoctors);
+
+                addToast({
+                    title: 'Success',
+                    message: 'Doctor profile deleted successfully',
+                    type: 'success'
+                });
+            } else {
+            }
+        } catch (error) {
+            console.error(error);
+            addToast({
+                title: 'Error',
+                message: error.response?.data?.message || 'Failed to perform action',
+                type: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
     };
+
+    const isInactive = row.status === 'Inactive';
 
     return (
         <div className="flex items-center justify-center gap-2 relative">
@@ -84,8 +148,9 @@ const ActionCell = ({ row }) => {
                 className={`p-2 py-2 rounded hover:bg-gray-100 ${isOpen ? 'bg-gray-100' : ''}`}
                 aria-label="More"
                 onClick={toggleMenu}
+                disabled={loading}
             >
-                <img src={more} alt="" className='w-4' />
+                {loading ? <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div> : <img src={more} alt="" className='w-4' />}
             </button>
 
             {isOpen && createPortal(
@@ -122,13 +187,25 @@ const ActionCell = ({ row }) => {
                         <Link className="w-4 h-4 text-gray-500" />
                         Send Magic Link
                     </button>
-                    <button
-                        onClick={(e) => handleAction('Mark as Inactive', e)}
-                        className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                    >
-                        <UserX className="w-4 h-4 text-gray-500" />
-                        Mark as Inactive
-                    </button>
+
+                    {isInactive ? (
+                        <button
+                            onClick={(e) => handleAction('Mark as Active', e)}
+                            className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                        >
+                            <UserCheck className="w-4 h-4 text-gray-500" />
+                            Mark as Active
+                        </button>
+                    ) : (
+                        <button
+                            onClick={(e) => handleAction('Mark as Inactive', e)}
+                            className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                        >
+                            <UserX className="w-4 h-4 text-gray-500" />
+                            Mark as Inactive
+                        </button>
+                    )}
+
                     <div className="h-px bg-gray-100 my-1"></div>
                     <button
                         onClick={(e) => handleAction('Delete Profile', e)}

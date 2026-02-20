@@ -21,9 +21,19 @@ export const getAllHospitalsBySuperAdmin = async () => {
   }
 };
 
+// Delete Hospital Profile (Super Admin)
+export const deleteHospitalProfile = async (hospitalId) => {
+  if (!hospitalId) throw new Error('hospitalId is required');
+  try {
+    const res = await axios.delete(`/hospitals/forSuperAdmin/${hospitalId}`);
+    return res.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
 // Get hospital details (banner data) by ID for Super Admin
 export const getHospitalByIdBySuperAdmin = async (hospitalId) => {
-  console.log("hospitalService: getHospitalByIdBySuperAdmin called with:", hospitalId);
   if (!hospitalId) throw new Error('hospitalId is required');
   try {
     const res = await axios.get(`/hospitals/forSuperAdmin/hospital-banner`, {
@@ -97,7 +107,7 @@ export const getHospitalGeneralTimingsForSuperAdmin = async (hospitalId) => {
 export const getHospitalInfoAndAddressForSuperAdmin = async (hospitalId) => {
   if (!hospitalId) throw new Error('hospitalId is required');
   try {
-    const res = await axios.get(`/hospitals/forSuperAdmin/hospitalInfo&address`, {
+    const res = await axios.get(`/hospitals/forSuperAdmin/hospital-info-address`, {
       params: { hospitalId }
     });
     // Expected shape: { success, message, data: { hospitalInfo: {...}, hospitalAddress: {...} }, ... }
@@ -111,7 +121,7 @@ export const getHospitalInfoAndAddressForSuperAdmin = async (hospitalId) => {
 export const getHospitalAdminDetailsForSuperAdmin = async (hospitalId) => {
   if (!hospitalId) throw new Error('hospitalId is required');
   try {
-    const res = await axios.get(`/hospitals/forSuperAdmin/adminDetails`, {
+    const res = await axios.get(`/hospitals/forSuperAdmin/admin-details`, {
       params: { hospitalId }
     });
     // Expected shape: { success, message, data: { firstName, lastName, ... }, ... }
@@ -200,7 +210,7 @@ export const deleteHospitalSurgeryForSuperAdmin = async (hospitalId, surgeryId) 
 export const updateHospitalInfoAndAddressForSuperAdmin = async (hospitalId, data) => {
   if (!hospitalId) throw new Error('hospitalId is required');
   try {
-    const res = await axios.put('/hospitals/forSuperAdmin/hospitalInfo&address', data, {
+    const res = await axios.put('/hospitals/forSuperAdmin/hospital-info-address', data, {
       params: { hospitalId }
     });
     return res.data;
@@ -212,7 +222,7 @@ export const updateHospitalInfoAndAddressForSuperAdmin = async (hospitalId, data
 export const updateHospitalAdminDetailsForSuperAdmin = async (hospitalId, data) => {
   if (!hospitalId) throw new Error('hospitalId is required');
   try {
-    const res = await axios.put('/hospitals/forSuperAdmin/adminDetails', data, {
+    const res = await axios.put('/hospitals/forSuperAdmin/admin-details', data, {
       params: { hospitalId }
     });
     return res.data;

@@ -93,7 +93,6 @@ const ConsultationTab = () => {
     const { addToast } = useToastStore();
 
     useEffect(() => {
-        console.log("[ConsultationTab] useEffect triggered", { doctorDetails, user, clinic, hospitalAdminUser, storeHospitalId });
 
         const resolveParams = () => {
             // Priority 1: doctorDetails from useDoctorAuthStore
@@ -134,13 +133,7 @@ const ConsultationTab = () => {
             const finalClinicId = dClinicId || uClinicId || hAdminClinicId || cId || ndClinicId;
             const finalHospitalId = dHospitalId || uHospitalId || hAdminHospitalId || ndHospitalId;
 
-            console.log("[ConsultationTab] ID Resolution Search:", {
-                fromDoctor: { dClinicId, dHospitalId },
-                fromUser: { uClinicId, uHospitalId },
-                fromHospitalAdmin: { hAdminClinicId, hAdminHospitalId },
-                fromClinicStore: cId,
-                fromNestedDoc: { ndClinicId, ndHospitalId }
-            });
+            
 
             if (finalClinicId) return { clinicId: finalClinicId };
             if (finalHospitalId) return { hospitalId: finalHospitalId };
@@ -150,7 +143,6 @@ const ConsultationTab = () => {
         // Only attempt to resolve and fetch if we are not still loading the doctor profile
         if (!docLoading) {
             const params = resolveParams();
-            console.log("[ConsultationTab] Final params for fetch:", params);
 
             if (params) {
                 fetchConsultationDetails(params);
@@ -175,7 +167,6 @@ const ConsultationTab = () => {
         // Deep clone the object to ensure Zustand/React detects change
         fees[0] = { ...fees[0], [field]: value };
 
-        console.log(`[ConsultationTab] handleFeeChange: ${field} =`, value);
         setConsultationDetails({ ...consultationDetails, consultationFees: fees });
     };
 
@@ -184,7 +175,6 @@ const ConsultationTab = () => {
         const dayIndex = schedule.findIndex(d => d.day.toUpperCase() === dayName.toUpperCase());
         if (dayIndex > -1) {
             schedule[dayIndex] = { ...schedule[dayIndex], ...updates };
-            console.log(`[ConsultationTab] handleScheduleChange for ${dayName}:`, updates);
             setConsultationDetails({
                 ...consultationDetails,
                 slotTemplates: { ...consultationDetails.slotTemplates, schedule }
@@ -193,7 +183,6 @@ const ConsultationTab = () => {
     };
 
     const handleSave = async () => {
-        console.log("[ConsultationTab] handleSave initiated");
         const resolveIds = () => {
             // Priority 1: doctorDetails (most specific)
             const dClinicId =
@@ -237,7 +226,6 @@ const ConsultationTab = () => {
         };
 
         const { clinicId, hospitalId } = resolveIds();
-        console.log("[ConsultationTab] handleSave resolved IDs:", { clinicId, hospitalId });
 
         if (!clinicId && !hospitalId) {
             console.error("[ConsultationTab] FAILED: No clinicId or hospitalId resolved!");
@@ -293,12 +281,9 @@ const ConsultationTab = () => {
             },
         };
 
-        console.log("[ConsultationTab] handleSave Payload:", payload);
 
         try {
-            console.log("[ConsultationTab] Calling updateConsultationDetails store action...");
             const res = await updateConsultationDetails(payload);
-            console.log("[ConsultationTab] updateConsultationDetails success:", res);
             addToast({
                 title: "Success",
                 message: "Consultation details updated successfully",
@@ -316,7 +301,6 @@ const ConsultationTab = () => {
 
     const curFees = consultationDetails.consultationFees[0] || {};
 
-    console.log("[ConsultationTab] Render state:", { isDirty, saving, loading });
 
     return (
         <div className="space-y-6 p-4">

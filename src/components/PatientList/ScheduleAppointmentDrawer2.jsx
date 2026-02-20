@@ -38,7 +38,6 @@ const ScheduleAppointmentDrawer2 = ({ open, onClose, patient, onSchedule, zIndex
             if (!open) return;
             if (!open) return;
             // if (!doctorId || (!clinicId && !hospitalId)) return;
-            console.log("ScheduleAppointmentDrawer2: Loading slots...", { doctorId, clinicId, hospitalId, open });
 
             setLoadingSlots(true);
             setSlotsError("");
@@ -56,7 +55,6 @@ const ScheduleAppointmentDrawer2 = ({ open, onClose, patient, onSchedule, zIndex
                 // let arr = Array.isArray(resp) ? resp : (resp?.data || resp?.slots || []);
 
                 // FORCE MOCK DATA FOR UI VERIFICATION
-                console.log("FORCING MOCK SLOTS");
                 const baseDate = apptDate || new Date().toISOString().split('T')[0];
                 const arr = [
                     { id: 'm1', startTime: `${baseDate}T10:00:00Z`, endTime: `${baseDate}T10:30:00Z`, availableTokens: 25 },

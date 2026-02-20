@@ -561,7 +561,6 @@ const StaffTab = () => {
   const resolveClinicId = () => {
     try {
       const doctorDetails = user;
-      console.log("[StaffTab] Auth store snapshot:", { user, doctorDetails });
       // Common places to find clinicId
       const fromUser =
         user?.clinicId ||
@@ -590,12 +589,7 @@ const StaffTab = () => {
       })();
       const resolved =
         fromUser || fromDoctor || maybeClinic || persisted || null;
-      console.log("[StaffTab] Resolved clinicId:", resolved, {
-        fromUser,
-        fromDoctor,
-        maybeClinic,
-        persisted,
-      });
+      
       return resolved;
     } catch (e) {
       return null;
@@ -619,14 +613,7 @@ const StaffTab = () => {
         setRolesError("");
         const base = axiosClient?.defaults?.baseURL;
         const url = `${base}/rbac/all-roles?clinicId=${clinicId}`;
-        console.log(
-          "[StaffTab] Fetching roles for clinicId:",
-          clinicId,
-          "baseURL:",
-          base,
-          "url:",
-          url
-        );
+        
         const data = await fetchAllRoles(clinicId);
         const list = data?.data || [];
         const mapped = list.map((r) => ({
@@ -674,9 +661,7 @@ const StaffTab = () => {
         const changed =
           state.user !== prev.user;
         if (changed) {
-          console.log(
-            "[StaffTab] Auth store changed; re-evaluating clinicId and roles fetch"
-          );
+          
           loadRoles();
         }
       });
@@ -698,12 +683,7 @@ const StaffTab = () => {
         return;
       }
       try {
-        console.log(
-          "[StaffTab] Fetching staff for clinicId:",
-          clinicId,
-          "baseURL:",
-          axiosClient?.defaults?.baseURL
-        );
+        
         const data = await fetchClinicStaff(clinicId);
         const list = data?.data || [];
         // Map API staff to UI StaffRow shape
@@ -1093,27 +1073,21 @@ const Doc_settings = () => {
   useEffect(() => {
     // Fetch all settings data on component mount
     fetchBasicInfo().catch(() => {
-      console.log("Error in fetch basic info");
     });
 
     fetchEducation().catch(() => {
-      console.log("Error in fetch education");
     });
 
     fetchExperiences().catch(() => {
-      console.log("Error in fetch experiences");
     });
 
     fetchAwardsAndPublications().catch(() => {
-      console.log("Error in fetch awards and publications");
     });
 
     fetchProfessionalDetails().catch(() => {
-      console.log("Error in fetch professional details");
     });
 
     fetchClinicInfo().catch(() => {
-      console.log("Error in fetch clinic info");
     });
   }, [
     fetchBasicInfo,

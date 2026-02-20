@@ -9,6 +9,7 @@ import Badge from '@/components/Badge';
 import { getDoctorDetailsByIdBySuperAdmin } from '@/services/doctorService';
 import UniversalLoader from "@/components/UniversalLoader";
 import { getPublicUrl } from '@/services/uploadsService';
+import AddBranchDrawer from '@/SuperAdmin/pages/Doctors/DoctorList/DoctorInfo/Drawers/AddBranchDrawer';
 
 const star = '/star.png'
 const down = '/angel-down.svg'
@@ -45,11 +46,9 @@ const DoctorBanner = ({ doctor: initialDoctor, onClinicChange }) => {
         return;
       }
 
-      console.log("DoctorBanner: Fetching latest details for:", userId);
       setLoading(true);
       try {
         const resp = await getDoctorDetailsByIdBySuperAdmin(userId);
-        console.log("DoctorBanner: Fetched Data:", resp);
         if (resp?.data) {
           const d = resp.data;
           const workplace = d?.workplace || { clinics: [], hospitals: [] };
@@ -126,6 +125,7 @@ const DoctorBanner = ({ doctor: initialDoctor, onClinicChange }) => {
   const [selectedId, setSelectedId] = useState(null);
   const [openMenu, setOpenMenu] = useState(null); // Track which menu is open by name or id
   const [showActionMenu, setShowActionMenu] = useState(false);
+  const [showAddBranchDrawer, setShowAddBranchDrawer] = useState(false);
   const clinicRef = useRef(null);
   const actionMenuRef = useRef(null);
 
@@ -180,7 +180,7 @@ const DoctorBanner = ({ doctor: initialDoctor, onClinicChange }) => {
   if (loading) {
     return (
       <div className="w-full h-[125px] flex items-center justify-center bg-white border rounded-lg">
-        <UniversalLoader size={30}  />
+        <UniversalLoader size={30} />
       </div>
     );
   }
@@ -355,7 +355,13 @@ const DoctorBanner = ({ doctor: initialDoctor, onClinicChange }) => {
 
 
 
-                  <div className='h-[32px] px-2 flex gap-1 items-center hover:bg-secondary-grey50'>
+                  <div
+                    className='h-[32px] px-2 flex gap-1 items-center hover:bg-secondary-grey50 cursor-pointer'
+                    onClick={() => {
+                      setShowAddBranchDrawer(true);
+                      setIsClinicOpen(false);
+                    }}
+                  >
                     <Plus className='w-3.5 h-3.5' />
                     <span className='text-blue-primary250 text-[14px]'>Add Branch</span>
                   </div>
@@ -460,6 +466,14 @@ const DoctorBanner = ({ doctor: initialDoctor, onClinicChange }) => {
           )}
         </div>
       </div>
+
+      <AddBranchDrawer
+        open={showAddBranchDrawer}
+        onClose={() => setShowAddBranchDrawer(false)}
+        onSave={(data) => {
+          // TODO: Integrate API call
+        }}
+      />
     </div>
   );
 };

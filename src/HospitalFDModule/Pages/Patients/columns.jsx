@@ -38,7 +38,6 @@ const ActionCell = ({ row, onOpenLog, onSchedule }) => {
 
     const handleAction = (action, e) => {
         e.stopPropagation();
-        console.log(action, row);
         setIsOpen(false);
     };
 

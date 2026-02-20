@@ -12,6 +12,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ChevronDown } from 'lucide-react';
 import axios from '../../../../lib/axios';
 import useToastStore from '../../../../store/useToastStore';
+import { indianCities } from '../../../../utils/indianCities';
 
 const upload = '/upload_blue.png';
 
@@ -207,13 +208,19 @@ const Hos_1 = forwardRef((props, ref) => {
     { value: "Prefer not to say", label: "Prefer not to say" },
   ];
 
-  const cityOptions = [
-    { value: "Akola, Maharashtra", label: "Akola, Maharashtra" },
-    { value: "Aurangabad, Maharashtra", label: "Aurangabad, Maharashtra" },
-    { value: "Nagpur, Maharashtra", label: "Nagpur, Maharashtra" },
-    { value: "Amravati, Maharashtra", label: "Amravati, Maharashtra" },
-    { value: "Akot, Maharashtra", label: "Akot, Maharashtra" }
-  ];
+  const [filteredCities, setFilteredCities] = useState([]);
+
+  useEffect(() => {
+    if (form.city) {
+      const filtered = indianCities
+        .filter(c => c.toLowerCase().includes(form.city.toLowerCase()))
+        .slice(0, 50)
+        .map(c => ({ value: c, label: c }));
+      setFilteredCities(filtered);
+    } else {
+      setFilteredCities(indianCities.slice(0, 20).map(c => ({ value: c, label: c })));
+    }
+  }, [form.city]);
 
   return (
     <div className="flex flex-col h-full bg-white rounded-md shadow-sm overflow-hidden">
@@ -299,13 +306,17 @@ const Hos_1 = forwardRef((props, ref) => {
                 label="City"
                 value={form.city}
                 requiredDot
-                placeholder="Select City"
+                placeholder="Search or enter city"
+                onChange={(val) => {
+                  updateField('city', val);
+                  if (!cityOpen) setCityOpen(true);
+                }}
                 RightIcon={ChevronDown}
-                readonlyWhenIcon={true}
+                readonlyWhenIcon={false} // Allow manual entry
                 onIconClick={() => setCityOpen(!cityOpen)}
                 dropdownOpen={cityOpen}
                 onRequestClose={() => setCityOpen(false)}
-                dropdownItems={cityOptions}
+                dropdownItems={filteredCities}
                 onSelectItem={(item) => {
                   updateField('city', item.value);
                   setCityOpen(false);

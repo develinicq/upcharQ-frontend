@@ -275,7 +275,7 @@ const Staff = ({ doctor }) => {
       try {
         setRolesLoading(true);
         setRolesError("");
-        const data = await fetchAllRoles(clinicId);
+        const data = await fetchAllRoles({ clinicId });
         const list = data?.data || [];
         const mapped = list.map((r) => ({
           id: r.id,
@@ -465,49 +465,20 @@ const Staff = ({ doctor }) => {
       <InviteStaffDrawer
         open={inviteOpen}
         onClose={() => setInviteOpen(false)}
+        clinicId={resolveClinicId()}
         onSend={(rows) => {
-          // Resolve clinicId
-          const clinicId = resolveClinicId();
-          // Fire POST for each row
-          Promise.all(
-            rows.map(async (r) => {
-              const [firstName = "", lastName = ""] =
-                String(r.fullName || "").split(" ").length > 1
-                  ? [
-                    String(r.fullName).split(" ")[0],
-                    String(r.fullName).split(" ").slice(1).join(" "),
-                  ]
-                  : [r.fullName || "", ""];
-              const payload = {
-                firstName,
-                lastName,
-                emailId: r.email,
-                phone: r.phone,
-                position: r.position,
-                clinicId,
-                roleId: r.roleId || null,
-              };
-              try {
-                await registerStaff(payload);
-              } catch (e) {
-                console.error("Failed to register staff", payload, e);
-              }
-              const selectedRole = roles.find((x) => x.id === r.roleId);
-              return {
-                name: r.fullName,
-                email: r.email,
-                phone: r.phone,
-                position: r.position,
-                role: selectedRole?.name || "",
-                status: "Inactive",
-              };
-            })
-          ).then((created) => {
-            setStaff((s) => [...created, ...s]);
-            setInviteOpen(false);
-          });
+          const newStaff = rows.map(r => ({
+            name: r.name,
+            email: r.email,
+            phone: r.phone,
+            position: r.position,
+            role: r.role,
+            status: "Inactive",
+            joined: new Date().toLocaleDateString("en-GB")
+          }));
+          setStaff((s) => [...newStaff, ...s]);
         }}
-        roleOptions={roles}
+      // roleOptions removed as InviteStaffDrawer fetches them
       />
       <RoleDrawerShared
         open={roleOpen}
